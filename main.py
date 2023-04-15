@@ -237,9 +237,11 @@ while opcao != 0:
                         (qntd, valor_un, id_produto, id_pedido))
                     conn.commit()
                     insereProd=int(input("Deseja inserir mais um produto nesse pedido? 0 - Não, 1 - Sim "))
+                    #Atualizar a quantidade de produtos na estabelecimentos_produtos e se não existir, cria um registro
             elif opcaoCRUD == 3:
                 # Remover
                 print("Remover")
+                # Atualizar a quantidade de produtos na estabelecimentos_produtos
             elif opcaoCRUD == 4:
                 # Editar
                 print("Editar")
@@ -257,9 +259,11 @@ while opcao != 0:
             elif opcaoCRUD == 2:
                 # Adicionar"
                 print("Adicionar")
+                # Atualizar a quantidade de produtos na estabelecimentos_produtos e se não existir produto o suficiente para venda, avisar na tela
             elif opcaoCRUD == 3:
                 # Remover
                 print("Remover")
+                # Atualizar a quantidade de produtos na estabelecimentos_produtos
             elif opcaoCRUD == 4:
                 # Editar
                 print("Editar")
