@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS funcionarios (
   cpf VARCHAR(14) UNIQUE NOT NULL,
   id_estabelecimento INT  NOT NULL,
   PRIMARY KEY (id_funcionario),
-  CONSTRAINT fk_funcionarios_estabelecimentos FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento),
+  CONSTRAINT fk_funcionarios_estabelecimentos FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento) ON DELETE CASCADE,
   UNIQUE(cpf)
 );
 
@@ -55,9 +55,9 @@ CREATE TABLE IF NOT EXISTS pedidos (
   id_funcionario INT  NOT NULL,
   id_fornecedor INT  NOT NULL,
   PRIMARY KEY (id_pedido),
-  CONSTRAINT fk_pedidos_estabelecimento FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento),
-  CONSTRAINT fk_pedidos_funcionarios FOREIGN KEY (id_funcionario) REFERENCES funcionarios (id_funcionario),
-  CONSTRAINT fk_pedidos_fornecedores FOREIGN KEY (id_fornecedor) REFERENCES fornecedores (id_fornecedor)
+  CONSTRAINT fk_pedidos_estabelecimento FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento) ON DELETE CASCADE ,
+  CONSTRAINT fk_pedidos_funcionarios FOREIGN KEY (id_funcionario) REFERENCES funcionarios (id_funcionario) ON DELETE CASCADE ,
+  CONSTRAINT fk_pedidos_fornecedores FOREIGN KEY (id_fornecedor) REFERENCES fornecedores (id_fornecedor) ON DELETE CASCADE 
 );
 
 -- -----------------------------------------------------
@@ -69,8 +69,8 @@ CREATE TABLE IF NOT EXISTS vendas (
   id_estabelecimento INT  NOT NULL,
   id_funcionario INT  NOT NULL,
   PRIMARY KEY (id_venda),
-  CONSTRAINT fk_vendas_estabelecimentos FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento),
-  CONSTRAINT fk_vendas_funcionarios FOREIGN KEY (id_funcionario) REFERENCES funcionarios (id_funcionario)
+  CONSTRAINT fk_vendas_estabelecimentos FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento) ON DELETE CASCADE ,
+  CONSTRAINT fk_vendas_funcionarios FOREIGN KEY (id_funcionario) REFERENCES funcionarios (id_funcionario) ON DELETE CASCADE 
 );
 
 -- -----------------------------------------------------
@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS pedidos_produtos (
   id_produto INT  NOT NULL,
   id_pedido INT NOT NULL,
   PRIMARY KEY (id_pedido_produto, id_produto, id_pedido),
-  CONSTRAINT fk_pedidos_produtos FOREIGN KEY (id_produto) REFERENCES produtos (id_produto),
-  CONSTRAINT fk_pedidos_pedidos FOREIGN KEY (id_pedido) REFERENCES pedidos (id_pedido)
+  CONSTRAINT fk_pedidos_produtos FOREIGN KEY (id_produto) REFERENCES produtos (id_produto) ON DELETE CASCADE ,
+  CONSTRAINT fk_pedidos_pedidos FOREIGN KEY (id_pedido) REFERENCES pedidos (id_pedido) ON DELETE CASCADE 
 );
 
 -- -----------------------------------------------------
@@ -97,8 +97,8 @@ CREATE TABLE IF NOT EXISTS vendas_produtos (
   id_venda INT NOT NULL,
   id_produto INT  NOT NULL,
   PRIMARY KEY (id_venda_produto, id_venda, id_produto),
-  CONSTRAINT fk_vendas_produtos_venda FOREIGN KEY (id_venda) REFERENCES vendas (id_venda),
-  CONSTRAINT fk_vendas_produtos_produtos FOREIGN KEY (id_produto) REFERENCES produtos (id_produto)
+  CONSTRAINT fk_vendas_produtos_venda FOREIGN KEY (id_venda) REFERENCES vendas (id_venda) ON DELETE CASCADE ,
+  CONSTRAINT fk_vendas_produtos_produtos FOREIGN KEY (id_produto) REFERENCES produtos (id_produto) ON DELETE CASCADE 
 );
 -- -----------------------------------------------------
 -- Estabelecimentos_produtos
@@ -108,8 +108,8 @@ CREATE TABLE IF NOT EXISTS estabelecimentos_produtos (
   id_produto INT  NOT NULL,
   quantidade INT NOT NULL,
   PRIMARY KEY (id_estabelecimento, id_produto),
-  CONSTRAINT fk_estabelecimentos_produtos_estabelecimentos FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento),
-  CONSTRAINT fk_estabelecimentos_produtos_produtos FOREIGN KEY (id_produto) REFERENCES produtos (id_produto)
+  CONSTRAINT fk_estabelecimentos_produtos_estabelecimentos FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos (id_estabelecimento) ON DELETE CASCADE ,
+  CONSTRAINT fk_estabelecimentos_produtos_produtos FOREIGN KEY (id_produto) REFERENCES produtos (id_produto) ON DELETE CASCADE 
 );
 
 -- -----------------------------------------------------
