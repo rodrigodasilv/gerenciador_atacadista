@@ -3,6 +3,10 @@
 
 Tutorial de instalação:
 
+Criar um banco de dados "db_atacadista" e executar nele o arquivo SQL do repositório.
+
+Instalar o python:
+
 ![image](https://user-images.githubusercontent.com/55567123/232242862-cac3bb2f-e9d3-4549-9714-f172c43ca7cf.png)
 
 Ao instalar o python, marcar a opção "Add Python to PATH"
