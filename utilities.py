@@ -117,8 +117,12 @@ def solicitar_inputs(persona, *inputs):
             entrada = input(f'Informe o Nome completo do {persona}: ')
         if _input == 'telefone':
             entrada = input(f'Informe o telefone do {persona} (com DDD): ')
+        
         if entrada:
             lista_inputs.append(entrada)
+
+    if len(lista_inputs) == 1:
+        return lista_inputs[0]
 
     return lista_inputs
 
