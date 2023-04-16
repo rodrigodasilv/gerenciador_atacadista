@@ -1,288 +1,274 @@
-import psycopg2
+from utilities import *
+import pyodbc
 from tabulate import tabulate
 from datetime import datetime
+import os
+
+# Ver com Rodrigo
+# Operações de negócio e relatórios -> CRUD das tabelas associativas
+
+# -> Cancelar venda e cancelar pedido (acho que não precisa)
+# -> Relatórios com condicionais? Ex.: Vendas por funcionario em certa data
+# -> Validação de CNPJ e CPF
+#       -> Após isso, precisa verificar os "solicitar_inputs()", pois caso venha um valor invalidado, precisa cancelar o processo
+#       Ex.: CNPJ invalido no cadastro de estabelecimento, retorna uma tupla (,'23123123'), o que vai causar erro no insert, portanto deve ser validado
+#       -> Essa validação também deve ser feito para os UPDATES e DELETES, pois quebra a execução do programa
+
+# Estabelecimentos funcionando perfeitamente
+# -> Insert funcionario não funciona (pyodbc.Error: ('HYC00', '[HYC00] Unknown statement option (Set) (10) (SQLSetStmtAttr)')
+# -> Update funcionario não funciona (pyodbc.Error: ('HYC00', '[HYC00] Unknown statement option (Set) (10) (SQLSetStmtAttr)')
+# Fornecedores funcionando perfeitamente
+# Produto funcionando perfeitamente
+
+while True:
+    escolhaInicial = menuInicial()
+    if escolhaInicial == 0: break
+
+    escolhaTabela = None
+
+    # 1 - Cadastro (INSERTS)
+    while escolhaInicial == 1 and escolhaTabela != 0:
+        escolhaTabela = menuTabelas()
+        if escolhaTabela == 0: continue
+
+        if escolhaTabela == 1:
+            cnpj, telefone = solicitar_inputs('estabelecimento', 'cnpj', 'telefone')
+            query_banco(f"INSERT INTO estabelecimentos (telefone, cnpj) VALUES ({cnpj}, {telefone});")
+        elif escolhaTabela == 2:
+            nome, cpf = solicitar_inputs('funcionario', 'nome', 'cpf')
+            id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("INSERT INTO funcionarios (nome, cpf, id_estabelecimento) VALUES (?, ?, ?)", nome, cpf, id_estabelecimento)
+        elif escolhaTabela == 3:
+            nome, cnpj, telefone, email = solicitar_inputs('fornecedor', 'nome', 'cnpj', 'telefone', 'email')
+            with connect_banco() as cursor:
+                cursor.execute('INSERT INTO fornecedores (nome, cnpj, telefone, email) VALUES (?, ?, ?, ?)', nome, cnpj, telefone, email)
+        elif escolhaTabela == 4:
+            nome, descricao = solicitar_inputs('produto', 'nome', 'descricao')
+            with connect_banco() as cursor:
+                cursor.execute('INSERT INTO produtos (nome, descricao)  VALUES (?, ?)', nome, descricao)
+        
+    # 2 - Consulta (SELECTS)
+    while escolhaInicial == 2 and escolhaTabela != 0:
+        escolhaTabela = menuTabelas()
+        if escolhaTabela == 0: continue
+
+        break_line()
+        if escolhaTabela == 1:
+            query = query_banco(""" SELECT e.id_estabelecimento,
+                                    CASE LENGTH(e.telefone) WHEN 11
+                                    THEN '(' || substr(e.telefone,0,3) || ') ' || SUBSTR(e.telefone,3,5) || '-' || SUBSTR(e.telefone,8,15)
+                                    ELSE e.telefone END CASE,
+                                    CASE LENGTH(e.cnpj) WHEN 14
+                                    THEN substr(e.cnpj,1,2) || '.' || SUBSTR(e.cnpj,3,3) || '.' || SUBSTR(e.cnpj,6,3) || '/' || SUBSTR(e.cnpj,9,4) || '-' || SUBSTR(e.cnpj,13,2)
+                                    ELSE e.cnpj END CASE FROM estabelecimentos e
+                                    
+                                """)
+            print_tabulado(query, ['ID Estabelecimento', 'Telefone', 'CNPJ'])
+        elif escolhaTabela == 2:
+            query = query_banco(""" SELECT f.id_funcionario, f.nome,
+                                    CASE LENGTH(f.cpf) WHEN 11
+                                    THEN SUBSTR(f.cpf,0,4) || '.' || SUBSTR(f.cpf,4,3) || '.' || SUBSTR(f.cpf,7,3) || '-' ||  SUBSTR(f.cpf,10,2)
+                                    ELSE f.cpf END,
+                                    f.id_estabelecimento,
+                                    e.cnpj FROM funcionarios f JOIN estabelecimentos e ON e.id_estabelecimento = f.id_estabelecimento
+                                """)
+            print_tabulado(query, ['ID Funcionário', 'Nome', 'CPF', 'ID Estabelecimento', 'CNPJ Estabelecimento'])
+        elif escolhaTabela == 3:
+            query = query_banco(""" SELECT fo.id_fornecedor, fo.nome,
+                                    CASE LENGTH(fo.cnpj) WHEN 14
+                                    THEN SUBSTR(fo.cnpj,1,2) || '.' || SUBSTR(fo.cnpj,3,3) || '.' || SUBSTR(fo.cnpj,6,3) || '/' || SUBSTR(fo.cnpj,9,4) || '-' || SUBSTR(fo.cnpj,13,2)
+                                    ELSE fo.cnpj END CASE,
+                                    CASE LENGTH(fo.telefone) WHEN 11
+                                    THEN '(' || substr(fo.telefone,0,3) || ') ' || substr(fo.telefone,3,5) || '-' || substr(fo.telefone,8,15)
+                                    ELSE fo.telefone END CASE,
+                                    fo.email FROM fornecedores fo
+                                """)
+            print_tabulado(query, ['ID Fornecedor', 'Nome', 'CNPJ', 'Telefone', 'E-mail'])
+        elif escolhaTabela == 4:
+            query = query_banco("SELECT p.* FROM produtos p")
+            print_tabulado(query, ['ID Produto', 'Nome', 'Descrição'])
+        break_line()
+        pause()
+    
+    # 3 - Atualização (UPDATES)
+    while escolhaInicial == 3 and escolhaTabela != 0:
+        escolhaTabela = menuTabelas()
+        if escolhaTabela == 0: continue
+
+        if escolhaTabela == 1:
+            chave, cnpj, telefone = solicitar_inputs('estabelecimento', 'chave', 'cnpj', 'telefone')
+            with cursor_banco() as cursor:
+                cursor.execute(f"UPDATE estabelecimentos SET telefone = ?, cnpj = ? WHERE id_estabelecimento = ?", telefone, cnpj, chave)
+        elif escolhaTabela == 2:
+            chave, nome, cpf = solicitar_inputs('funcionario', 'chave', 'nome', 'cpf')
+            id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute('UPDATE funcionarios SET nome = ?, cpf = ?, id_estabelecimento = ? WHERE id_funcionario = ?', nome, cpf, id_estabelecimento, chave)
+        elif escolhaTabela == 3:
+            chave, nome, cnpj, telefone, email = solicitar_inputs('fornecedor', 'chave', 'nome', 'cnpj', 'telefone', 'email')
+            with cursor_banco() as cursor:
+                cursor.execute('UPDATE fornecedores SET nome = ?, cnpj = ?, telefone = ?, email = ? WHERE id_fornecedor = ?', nome, cnpj, telefone, email, chave)
+        elif escolhaTabela == 4:
+            chave, nome, descricao = solicitar_inputs('produto', 'chave', 'nome', 'descricao')
+            with cursor_banco() as cursor:
+                cursor.execute(f'UPDATE produtos SET nome = ?, descricao = ? WHERE id_produto = ?', nome, descricao, chave)
+
+    # 4 - Remoção (DELETES)
+    while escolhaInicial == 4 and escolhaTabela != 0:
+        escolhaTabela = menuTabelas()
+        if escolhaTabela == 0: continue
+
+        if escolhaTabela == 1:
+            print("ATENÇÃO! Todos os funcionários, pedidos, vendas e produtos vinculados a este estabelecimento serão excluídos!")
+            chave = solicitar_inputs('estabelecimento', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("DELETE FROM estabelecimentos WHERE id_estabelecimento=?", chave)
+        elif escolhaTabela == 2:
+            print("ATENÇÃO! Todos os pedidos e vendas vinculados a este funcionário serão excluídos!")
+            chave = solicitar_inputs('funcionario', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("DELETE FROM funcionarios WHERE id_funcionario=?", chave)
+        elif escolhaTabela == 3:
+            print("ATENÇÃO! Todos os pedidos vinculados a este fornecedor serão excluídos!")
+            chave = solicitar_inputs('fornecedor', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("DELETE FROM fornecedores WHERE id_fornecedor=?", chave)
+        elif escolhaTabela == 4:
+            print("ATENÇÃO! Todos os produtos de pedidos, compras ou estabelecimentos vinculados a este serão excluídos!")
+            chave = solicitar_inputs('produto', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("DELETE FROM produtos WHERE id_produto=?", chave)
+
+    # 5 - Registrar venda
+    if escolhaInicial == 5:
+        print('Venda')
+        pass
+
+    # 6 - Realizar pedido
+    if escolhaInicial == 6:
+        data = datetime.now().strftime('%d/%m/%Y %H:%M')
+        id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+        id_funcionario = solicitar_inputs('funcionario', 'chave')
+        id_fornecedor = solicitar_inputs('fornecedor', 'chave')
+        
+        with cursor_banco() as cursor:
+            cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario,id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
+            id_pedido = cursor.fetchone()[0]
+
+        print(1)
+        contador = 0
+        registroHistorico = []
+        while True:
+            id_produto = int_input("Informe o ID do Produto: ")
+            valor_un = float(input("Informe o valor unitário do produto: "))
+            quantidadePedida = input("Informe a quantidade de produtos comprados: ")
+
+            if quantidadePedida <= 0:
+                print('Quantidade pedida invalida.')
+                continue
+            
+            print(2)
+            with cursor_banco() as cursor:
+                cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto} AND id_estabelecimento={id_estabelecimento}")
+                quantidadeAtual = cursor.fetchone()[0]
+
+            print(3)
+            # Produto não cadastrado
+            if quantidadeAtual == None:
+                with cursor_banco() as cursor:
+                    cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto}")
+                    quantidadeAtual = cursor.fetchone()[0]
+                if quantidadeAtual == None:
+                    print('Produto não existe. Deseja cadastrar?')
+                    produtoExiste = False
+                else:
+                    print('Produto não está cadastrado neste estabelecimento, deseja associar o produto?')
+                    produtoExiste = True
+    
+                escolha = int_input('1 - Cadastrar produto.\n2 - Finalizar pedido.\n3 - Cancelar pedido.')
+                if escolha == 1:
+                    if produtoExiste:
+                        pass
+                    if not produtoExiste:
+                        nome, descricao = solicitar_inputs('produto', 'nome', 'descricao')
+                        query_banco(f'INSERT INTO produtos (nome, descricao)  VALUES ({nome}, {descricao});')
+                if escolha == 2:
+                    break
+                if escolha == 3:
+                    for registro in registroHistorico:
+                        with cursor_banco() as cursor:
+                            cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
+                            quantidadeAtual = cursor.fetchone()[0] - registro[1]
+                        query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
+                    break
+            print(4)
+            
+            
+            with cursor_banco() as cursor:
+                cursor.execute("INSERT INTO pedidos_produtos (quantidade, valor_unitario, id_produto, id_pedido) VALUES (?, ?, ?, ?) RETURNING id_produto;", quantidadePedida, valor_un, id_produto, id_pedido)
+                id_produto = cursor.fetchone()[0]
+            
+            registroHistorico.append((id_produto, quantidadePedida))
+
+            quantidadeAtual += quantidadePedida
+            query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
+            contador += 1
+
+            inserirMaisProduto = int_input("Deseja inserir mais um produto nesse pedido?\n1 - Sim\n2 - Não\n3 - Cancelar compra ")
+            if inserirMaisProduto == 2:
+                break
+            if inserirMaisProduto == 3:
+                for registro in registroHistorico:
+                    with cursor_banco() as cursor:
+                        cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
+                        quantidadeAtual = cursor.fetchone()[0] - registro[1]
+                    query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
+                break
+            
+            print(5)
+        if contador == 0 and not quantidadeAtual:
+            print('Nenhum produto cadastrado no pedido, cancelando ordem de compra.')
+            query_banco(f"DELETE FROM pedidos WHERE id_pedido={id_pedido}")
 
 
-def menu():
-    print("Informe a opção desejada:")
-    print("1 - Estabelecimentos")
-    print("2 - Funcionários")
-    print("3 - Fornecedores")
-    print("4 - Produtos")
-    print("5 - Pedidos")
-    print("6 - Vendas")
-    print("7 - Relatórios")
-    print("0 - Sair")
+    # 7 - Relatórios
+    escolhaRelatorio = None
+    while escolhaInicial == 7 and escolhaRelatorio != 0:
+        escolhaRelatorio = menuRelatorios()
+        if escolhaRelatorio == 0: continue
+        break_line()
 
-
-def menuCRUD():
-    print("Informe a opção desejada:")
-    print("1 - Mostrar todos")
-    print("2 - Adicionar")
-    print("3 - Remover")
-    print("4 - Editar")
-    print("0 - Voltar")
-
-
-def menuRelatorios():
-    print("Informe o relatório desejado:")
-    print("1 - Produtos disponíveis em cada estabelecimento")
-    print("2 - Vendas por funcionário")
-    print("3 - Compras por funcionário")
-    print("0 - Voltar")
-
-
-conn = psycopg2.connect("dbname=db_atacadista user=postgres password=admin") #Nome do banco, usuário e senha
-cursor = conn.cursor()
-
-menu()
-opcao = int(input("Digite sua opção: "))
-while opcao != 0:
-    if opcao == 1:
-        print("Estabelecimentos")
-        menuCRUD()
-        opcaoCRUD = int(input("Informe a opção: "))
-        while opcaoCRUD != 0:
-            if opcaoCRUD == 1:
-                #Mostrar todos
-                cursor.execute(
-                    "select e.id_estabelecimento, case length(e.cnpj) when 14 then substr(e.cnpj,1,2) || '.' || substr("
-                    "e.cnpj,3,3) || '.' || substr(e.cnpj,6,3) || '/' || substr(e.cnpj,9,4) || '-' || substr(e.cnpj,13,"
-                    "2) else e.cnpj end case, case length(e.telefone) when 11 then '(' || substr(e.telefone,0,3) || ') ' "
-                    "|| substr(e.telefone,3,5) || '-' || substr(e.telefone,8,15)  else e.telefone end case from "
-                    "estabelecimentos e")
-                query = cursor.fetchall()
-                header = ['ID Estabelecimento', 'Telefone', 'CNPJ']
-                print(tabulate(query, headers=header))
-            elif opcaoCRUD == 2:
-                #Adicionar"
-                cnpj = input("Informe o CNPJ do Estabelecimento: ")
-                telefone = input("Informe o telefone do Estabelecimento (com DDD): ")
-                cursor.execute(
-                    "INSERT INTO estabelecimentos (telefone, cnpj) VALUES (%s, %s);",
-                    (telefone, cnpj))
-                conn.commit()
-            elif opcaoCRUD == 3:
-                #Remover
-                print("ATENÇÃO! Todos os funcionários, pedidos, vendas e produtos vinculados a este estabelecimento "
-                      "serão excluídos!")
-                chave = int(input("Digite o ID do estabelecimento a ser excluído: "))
-                cursor.execute("DELETE FROM estabelecimentos WHERE id_estabelecimento=%s", (chave,))
-                conn.commit()
-            elif opcaoCRUD == 4:
-                #Editar
-                chave = int(input("Digite o ID do estabelecimento a ser alterado: "))
-                cnpj = input("Informe o CNPJ do Estabelecimento: ")
-                telefone = input("Informe o telefone do Estabelecimento (com DDD): ")
-                cursor.execute(
-                    "UPDATE estabelecimentos SET telefone = %s, cnpj = %s WHERE id_estabelecimento = %s",
-                    (telefone, cnpj, chave))
-                conn.commit()
-            menuCRUD()
-            opcaoCRUD = int(input("Informe a opção: "))
-
-    if opcao == 2:
-        print("Funcionários")
-        menuCRUD()
-        opcaoCRUD = int(input("Informe a opção: "))
-        while opcaoCRUD != 0:
-            if opcaoCRUD == 1:
-                # Mostrar todos
-                cursor.execute(
-                    "select f.id_funcionario, f.nome, case length(f.cpf) when 11 then substr(f.cpf,0,4) || '.' || substr(f.cpf,4,3) || '.' || substr(f.cpf,7,3) || '-' ||  substr(f.cpf,10,2)  else f.cpf end, f.id_estabelecimento, e.cnpj from funcionarios f join estabelecimentos e on e.id_estabelecimento = f.id_estabelecimento")
-                query = cursor.fetchall()
-                header = ['ID Funcionário', 'Nome', 'CPF', 'ID Estabelecimento', 'CNPJ Estabelecimento']
-                print(tabulate(query, headers=header))
-            elif opcaoCRUD == 2:
-                # Adicionar"
-                nome = input("Informe o Nome completo do Funcionário: ")
-                cpf = input("Informe o CPF do Funcionário: ")
-                id_estabelecimento = int(input("Informe o ID do Estabelecimento que o Funcionário trabalha: "))
-                cursor.execute(
-                    "INSERT INTO funcionarios (nome, cpf, id_estabelecimento) VALUES (%s, %s, %s);",
-                    (nome, cpf, id_estabelecimento))
-                conn.commit()
-            elif opcaoCRUD == 3:
-                # Remover
-                print("ATENÇÃO! Todos os pedidos e vendas vinculados a este funcionário "
-                      "serão excluídos!")
-                chave = int(input("Digite o ID do funcionário a ser excluído: "))
-                cursor.execute("DELETE FROM funcionarios WHERE id_funcionario=%s", (chave,))
-                conn.commit()
-            elif opcaoCRUD == 4:
-                # Editar
-                chave = int(input("Digite o ID do funcionário a ser alterado: "))
-                nome = input("Informe o Nome completo do Funcionário: ")
-                cpf = input("Informe o CPF do Funcionário: ")
-                id_estabelecimento = int(input("Informe o ID do Estabelecimento que o Funcionário trabalha: "))
-                cursor.execute(
-                    "UPDATE funcionarios SET nome = %s, cpf = %s, id_estabelecimento = %s WHERE id_funcionario = %s",
-                    (nome, cpf, id_estabelecimento, chave))
-                conn.commit()
-            menuCRUD()
-            opcaoCRUD = int(input("Informe a opção: "))
-
-    if opcao == 3:
-        print("Fornecedores")
-
-        menuCRUD()
-        opcaoCRUD = int(input("Informe a opção: "))
-        while opcaoCRUD != 0:
-            if opcaoCRUD == 1:
-                # Mostrar todos
-                cursor.execute("select fo.id_fornecedor, fo.nome, case length(fo.cnpj) when 14 then  substr(fo.cnpj,1,2) || '.' || substr(fo.cnpj,3,3) || '.' || substr(fo.cnpj,6,3) || '/' || substr(fo.cnpj,9,4) || '-' || substr(fo.cnpj,13,2) else fo.cnpj end case, case length(fo.telefone) when 11 then '(' || substr(fo.telefone,0,3) || ') ' || substr(fo.telefone,3,5) || '-' || substr(fo.telefone,8,15)  else fo.telefone end case, fo.email from fornecedores fo")
-                query = cursor.fetchall()
-                header = ['ID Fornecedor', 'Nome', 'CNPJ', 'Telefone', 'E-mail']
-                print(tabulate(query, headers=header))
-            elif opcaoCRUD == 2:
-                # Adicionar"
-                nome = input("Informe o Nome completo do Fornecedor: ")
-                cnpj = input("Informe o CNPJ do Fornecedor: ")
-                telefone = input("Informe o Telefone do Fornecedor: ")
-                email = input("Informe o E-mail do Fornecedor: ")
-                cursor.execute(
-                    "INSERT INTO fornecedores (nome, cnpj, telefone, email) VALUES (%s, %s, %s, %s);",
-                    (nome, cnpj, telefone,email))
-                conn.commit()
-            elif opcaoCRUD == 3:
-                # Remover
-                print("ATENÇÃO! Todos os pedidos vinculados a este fornecedor "
-                      "serão excluídos!")
-                chave = int(input("Digite o ID do fornecedor a ser excluído: "))
-                cursor.execute("DELETE FROM fornecedores WHERE id_fornecedor=%s", (chave,))
-                conn.commit()
-            elif opcaoCRUD == 4:
-                # Editar
-                chave = int(input("Digite o ID do fornecedor a ser alterado: "))
-                nome = input("Informe o Nome completo do Fornecedor: ")
-                cnpj = input("Informe o CNPJ do Fornecedor: ")
-                telefone = input("Informe o Telefone do Fornecedor: ")
-                email = input("Informe o E-mail do Fornecedor: ")
-                cursor.execute(
-                    "UPDATE fornecedores SET nome = %s, cnpj = %s, telefone = %s, email = %s WHERE id_fornecedor = %s",
-                    (nome, cnpj, telefone,email,chave))
-                conn.commit()
-            menuCRUD()
-            opcaoCRUD = int(input("Informe a opção: "))
-
-    if opcao == 4:
-        print("Produtos")
-        menuCRUD()
-        opcaoCRUD = int(input("Informe a opção: "))
-        while opcaoCRUD != 0:
-            if opcaoCRUD == 1:
-                # Mostrar todos
-                cursor.execute(
-                    "select p.* from produtos p")
-                query = cursor.fetchall()
-                header = ['ID Produto', 'Nome', 'Descrição']
-                print(tabulate(query, headers=header))
-            elif opcaoCRUD == 2:
-                # Adicionar"
-                nome = input("Informe o Nome do produto: ")
-                descricao = input("Informe a descricao do produto: ")
-                cursor.execute(
-                    "INSERT INTO produtos (nome, descricao)  VALUES (%s, %s);",
-                    (nome, descricao))
-                conn.commit()
-            elif opcaoCRUD == 3:
-                # Remover
-                print("ATENÇÃO! Todos os produtos de pedidos, compras ou estabelecimentos vinculados a este "
-                      "serão excluídos!")
-                chave = int(input("Digite o ID do produto a ser excluído: "))
-                cursor.execute("DELETE FROM produtos WHERE id_produto=%s", (chave,))
-                conn.commit()
-            elif opcaoCRUD == 4:
-                # Editar
-                chave = int(input("Digite o ID do produto a ser alterado: "))
-                nome = input("Informe o Nome do produto: ")
-                descricao = input("Informe a descricao do produto: ")
-                cursor.execute(
-                    "UPDATE produtos SET nome = %s, descricao = %s WHERE id_fornecedor = %s",
-                    (nome, descricao, chave))
-                conn.commit()
-            menuCRUD()
-            opcaoCRUD = int(input("Informe a opção: "))
-
-    if opcao == 5:
-        print("Pedidos")
-
-        menuCRUD()
-        opcaoCRUD = int(input("Informe a opção: "))
-        while opcaoCRUD != 0:
-            if opcaoCRUD == 1:
-                # Mostrar todos
-                cursor.execute("select p.id_pedido, to_char(p.data_pedido,'dd/mm/YYYY hh:ss'), p.id_estabelecimento, case length(e.cnpj) when 14 then substr(e.cnpj,1,2) || '.' || substr(e.cnpj,3,3) || '.' || substr(e.cnpj,6,3) || '/' || substr(e.cnpj,9,4) || '-' || substr(e.cnpj,13,2) else e.cnpj end case, prod.nome,pp.quantidade, pp.valor_unitario,p.id_funcionario, fu.nome, p.id_fornecedor, f.nome  from pedidos p join fornecedores f on f.id_fornecedor = p.id_fornecedor join funcionarios fu on p.id_funcionario = fu.id_funcionario join estabelecimentos e on e.id_estabelecimento = p.id_estabelecimento join pedidos_produtos pp ON pp.id_pedido = p.id_pedido join produtos prod on prod.id_produto = pp.id_produto")
-                query = cursor.fetchall()
-                header = ['ID Pedido', 'Data do Pedido', 'ID Estabelecimento', 'CNPJ Estabelecimento', 'Nome do Produto', 'Quantidade', 'Valor Unitário', 'ID Funcionário', 'Nome Funcionário', 'ID Fornecedor', 'Nome Fornecedor']
-                print(tabulate(query, headers=header))
-            elif opcaoCRUD == 2:
-                # Adicionar"
-                data = datetime.now().strftime('%d/%m/%Y %H:%M')
-                id_estabelecimento = input("Informe o ID do Estabelecimento: ")
-                id_funcionario = input("Informe o ID do Funcionário: ")
-                id_fornecedor = input("Informe o ID do Fornecedor: ")
-                cursor.execute(
-                    "INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario,id_fornecedor)  VALUES (%s, %s,%s,%s) RETURNING id_pedido;",
-                    (data,id_estabelecimento, id_funcionario,id_fornecedor))
-                conn.commit()
-                id_pedido = cursor.fetchone()[0]
-                insereProd=1
-                while insereProd!=0:
-                    id_produto = input("Informe o ID do Produto: ")
-                    valor_un = input("Informe o valor unitário do produto: ")
-                    qntd = input("Informe a quantidade de produtos comprados: ")
-                    cursor.execute(
-                        "INSERT INTO pedidos_produtos (quantidade, valor_unitario, id_produto,id_pedido)  VALUES (%s, %s,%s,%s);",
-                        (qntd, valor_un, id_produto, id_pedido))
-                    conn.commit()
-                    insereProd=int(input("Deseja inserir mais um produto nesse pedido? 0 - Não, 1 - Sim "))
-                    #Atualizar a quantidade de produtos na estabelecimentos_produtos e se não existir, cria um registro
-            elif opcaoCRUD == 3:
-                # Remover
-                print("Remover")
-                # Atualizar a quantidade de produtos na estabelecimentos_produtos
-            elif opcaoCRUD == 4:
-                # Editar
-                print("Editar")
-            menuCRUD()
-            opcaoCRUD = int(input("Informe a opção: "))
-    if opcao == 6:
-        print("Vendas")
-
-        menuCRUD()
-        opcaoCRUD = int(input("Informe a opção: "))
-        while opcaoCRUD != 0:
-            if opcaoCRUD == 1:
-                # Mostrar todos
-                print("Mostrar todos")
-            elif opcaoCRUD == 2:
-                # Adicionar"
-                print("Adicionar")
-                # Atualizar a quantidade de produtos na estabelecimentos_produtos e se não existir produto o suficiente para venda, avisar na tela
-            elif opcaoCRUD == 3:
-                # Remover
-                print("Remover")
-                # Atualizar a quantidade de produtos na estabelecimentos_produtos
-            elif opcaoCRUD == 4:
-                # Editar
-                print("Editar")
-            menuCRUD()
-            opcaoCRUD = int(input("Informe a opção: "))
-    if opcao == 7:
-        print("Relatórios")
-        menuRelatorios()
-        opcaoRel = int(input("Informe a opção: "))
-        if opcaoRel == 1:
-            #Produtos disponíveis em cada estabelecimento
-            print("Produtos disponíveis em cada estabelecimento")
-        elif opcaoRel ==2:
-            #Vendas por funcionário
-            print("Vendas por funcionário")
-        elif opcaoRel == 3:
-            #Compras por fornecedor
-            print("Compras por fornecedor")
-    menu()
-    opcao = int(input("Digite sua opção: "))
-
- 
+        if escolhaRelatorio == 1: # Produtos disponíveis em cada estabelecimento
+            query = query_banco(""" SELECT estab.id_estabelecimento, estab.cnpj, sum(prod.id_produto)
+                                    FROM produtos prod
+                                    INNER JOIN estabelecimentos_produtos estab_prod
+                                    ON estab_prod.id_produto = prod.id_produto
+                                    INNER JOIN estabelecimentos estab
+                                    ON estab.id_estabelecimento = estab_prod.id_estabelecimento
+                                    GROUP BY estab.id_estabelecimento, estab.cnpj
+                                """)
+            print_tabulado(query, ['ID Estabelecimento', 'CNPJ', 'Quantidade de produtos'])
+        elif escolhaRelatorio == 2: # Vendas por funcionário
+            query = query_banco(""" SELECT f.id_funcionario, f.nome, SUM(v_prod.quantidade) AS quantidade, SUM(v_prod.valor_unitario * v_prod.quantidade) AS valor_arrecadado
+                                    FROM funcionarios f
+                                    INNER JOIN vendas v
+                                    ON v.id_funcionario = f.id_funcionario
+                                    INNER JOIN vendas_produtos v_prod
+                                    ON v_prod.id_venda = v.id_venda
+                                    GROUP BY f.id_funcionario, f.nome
+                                """)
+            print_tabulado(query, ['ID Funcionario', 'Nome', 'Quantidade vendida', 'Valor arrecadado'])
+        elif escolhaRelatorio == 3: # Compras por fornecedor
+            query = query_banco(""" SELECT f.nome, sum(ped_prod.quantidade) AS produtos, sum(ped_prod.valor_unitario * ped_prod.quantidade) AS valor_pago
+                                    FROM fornecedores f
+                                    INNER JOIN pedidos ped
+                                    ON ped.id_fornecedor = f.id_fornecedor
+                                    INNER JOIN pedidos_produtos ped_prod
+                                    ON ped_prod.id_pedido = ped.id_pedido
+                                    GROUP BY f.nome
+                                """)
+            print_tabulado(query, ['Fornecedor', 'Produtos comprados', 'Valor pago'])
+        
+        break_line()
+        pause()
