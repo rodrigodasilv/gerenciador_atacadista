@@ -14,11 +14,7 @@ import os
 #       Ex.: CNPJ invalido no cadastro de estabelecimento, retorna uma tupla (,'23123123'), o que vai causar erro no insert, portanto deve ser validado
 #       -> Essa validação também deve ser feito para os UPDATES e DELETES, pois quebra a execução do programa
 
-# Estabelecimentos funcionando perfeitamente
-# -> Insert funcionario não funciona (pyodbc.Error: ('HYC00', '[HYC00] Unknown statement option (Set) (10) (SQLSetStmtAttr)')
-# -> Update funcionario não funciona (pyodbc.Error: ('HYC00', '[HYC00] Unknown statement option (Set) (10) (SQLSetStmtAttr)')
-# Fornecedores funcionando perfeitamente
-# Produto funcionando perfeitamente
+# Adicionar consulta de estoque
 
 while True:
     escolhaInicial = menuInicial()
@@ -141,6 +137,8 @@ while True:
                 cursor.execute("DELETE FROM produtos WHERE id_produto=?", chave)
 
     # 5 - Registrar venda
+    # Se o produto não existe na estabelecimento produtos ou quantidadeVendida < quantidadeEstoque, bloqueia a venda, não permite
+    # Avisa e volta para cadastro de produtos, (da um continue)
     if escolhaInicial == 5:
         print('Venda')
         pass
@@ -156,34 +154,56 @@ while True:
             cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario,id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
             id_pedido = cursor.fetchone()[0]
 
-        print(1)
         contador = 0
         registroHistorico = []
-        while True:
-            id_produto = int_input("Informe o ID do Produto: ")
+        while True: # Cadastro de produtos no pedido
+            clear()
+            id_produto = int_input("Informe o ID do Produto (0 para cancelar): ")
             valor_un = float(input("Informe o valor unitário do produto: "))
-            quantidadePedida = input("Informe a quantidade de produtos comprados: ")
+            quantidadePedida = int_input("Informe a quantidade de produtos comprados: ")
 
+
+            # Validação dos inputs
+            if valor_un <= 0:
+                print('Quantidade pedida invalida.')
+                continue
             if quantidadePedida <= 0:
                 print('Quantidade pedida invalida.')
                 continue
             
-            print(2)
+            # Confirmação
+            print(f'ID Produto: {id_produto}\nValor un.: {valor_un}\nQuantidade: {quantidadePedida}\n\nDeseja confirmar?')
+            escolha = int_input('1 - Sim.\n2 - Não.\n3 - Cancelar pedido.')
+            if inserirMaisProduto == 2:
+                continue
+            if inserirMaisProduto == 3:
+                for registro in registroHistorico:
+                    with cursor_banco() as cursor:
+                        cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
+                        quantidadeAtual = cursor.fetchone()[0] - registro[1]
+                    query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
+                query_banco(f'DELETE FROM pedidos WHERE id_pedido = {id_pedido}')
+                break
+
+
+            # Seleciona a quantidade atual em estoque -> mudar nome da variável de quantidadeAtual para estoqueAtual
             with cursor_banco() as cursor:
                 cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto} AND id_estabelecimento={id_estabelecimento}")
-                quantidadeAtual = cursor.fetchone()[0]
+                quantidadeAtual = cursor.fetchone()
+            if quantidadeAtual:
+                quantidadeAtual = quantidadeAtual[0]
 
-            print(3)
-            # Produto não cadastrado
-            if quantidadeAtual == None:
-                with cursor_banco() as cursor:
+            # Produto não cadastrado neste estabelecimento
+            if not quantidadeAtual:
+                with cursor_banco() as cursor: # MUDAR O SELECT PARA PRODUTOS
                     cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto}")
                     quantidadeAtual = cursor.fetchone()[0]
-                if quantidadeAtual == None:
+                if not quantidadeAtual: # Produto não cadastrado na base -> vai se fude, não está cadastrado, abrir margem para cadastrar na tabela produtos depois e inserir no pedido
                     print('Produto não existe. Deseja cadastrar?')
                     produtoExiste = False
                 else:
                     print('Produto não está cadastrado neste estabelecimento, deseja associar o produto?')
+                    # Cadastrar produto no estabelecimento_produtos com estoque zerados
                     produtoExiste = True
     
                 escolha = int_input('1 - Cadastrar produto.\n2 - Finalizar pedido.\n3 - Cancelar pedido.')
@@ -199,22 +219,24 @@ while True:
                     for registro in registroHistorico:
                         with cursor_banco() as cursor:
                             cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
-                            quantidadeAtual = cursor.fetchone()[0] - registro[1]
+                            quantidadeAtual = cursor.fetchone()[0]  - registro[1]
                         query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
+                    query_banco(f'DELETE FROM pedidos WHERE id_pedido = {id_pedido}')
                     break
-            print(4)
             
-            
+            # Produto cadastrado e inserido no pedido
             with cursor_banco() as cursor:
                 cursor.execute("INSERT INTO pedidos_produtos (quantidade, valor_unitario, id_produto, id_pedido) VALUES (?, ?, ?, ?) RETURNING id_produto;", quantidadePedida, valor_un, id_produto, id_pedido)
                 id_produto = cursor.fetchone()[0]
             
             registroHistorico.append((id_produto, quantidadePedida))
 
+            # Estoque do produto atualizado
             quantidadeAtual += quantidadePedida
             query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
             contador += 1
 
+            # Cadastro de mais produtos ou cancelamento da compra
             inserirMaisProduto = int_input("Deseja inserir mais um produto nesse pedido?\n1 - Sim\n2 - Não\n3 - Cancelar compra ")
             if inserirMaisProduto == 2:
                 break
@@ -224,12 +246,15 @@ while True:
                         cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
                         quantidadeAtual = cursor.fetchone()[0] - registro[1]
                     query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
+                query_banco(f'DELETE FROM pedidos WHERE id_pedido = {id_pedido}')
                 break
             
             print(5)
         if contador == 0 and not quantidadeAtual:
             print('Nenhum produto cadastrado no pedido, cancelando ordem de compra.')
             query_banco(f"DELETE FROM pedidos WHERE id_pedido={id_pedido}")
+
+        # Tirar cancelamento durante cadastro
 
 
     # 7 - Relatórios
@@ -239,7 +264,9 @@ while True:
         if escolhaRelatorio == 0: continue
         break_line()
 
-        if escolhaRelatorio == 1: # Produtos disponíveis em cada estabelecimento
+        # Adicionar filtros
+
+        if escolhaRelatorio == 1: # Produtos disponíveis em cada estabelecimento -> Filtro por estabelecimento, detalhar produtos
             query = query_banco(""" SELECT estab.id_estabelecimento, estab.cnpj, sum(prod.id_produto)
                                     FROM produtos prod
                                     INNER JOIN estabelecimentos_produtos estab_prod
@@ -249,7 +276,7 @@ while True:
                                     GROUP BY estab.id_estabelecimento, estab.cnpj
                                 """)
             print_tabulado(query, ['ID Estabelecimento', 'CNPJ', 'Quantidade de produtos'])
-        elif escolhaRelatorio == 2: # Vendas por funcionário
+        elif escolhaRelatorio == 2: # Vendas por funcionário -> Filtro por data e filtro por funcionario (detalhar produtos)
             query = query_banco(""" SELECT f.id_funcionario, f.nome, SUM(v_prod.quantidade) AS quantidade, SUM(v_prod.valor_unitario * v_prod.quantidade) AS valor_arrecadado
                                     FROM funcionarios f
                                     INNER JOIN vendas v
@@ -259,7 +286,7 @@ while True:
                                     GROUP BY f.id_funcionario, f.nome
                                 """)
             print_tabulado(query, ['ID Funcionario', 'Nome', 'Quantidade vendida', 'Valor arrecadado'])
-        elif escolhaRelatorio == 3: # Compras por fornecedor
+        elif escolhaRelatorio == 3: # Compras por fornecedor -> Filtro por data e por fornecedor (detalhar produtos)
             query = query_banco(""" SELECT f.nome, sum(ped_prod.quantidade) AS produtos, sum(ped_prod.valor_unitario * ped_prod.quantidade) AS valor_pago
                                     FROM fornecedores f
                                     INNER JOIN pedidos ped
