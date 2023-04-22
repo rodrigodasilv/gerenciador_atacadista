@@ -187,14 +187,19 @@ while True:
             with cursor_banco() as cursor:
                 cursor.execute("DELETE FROM produtos WHERE id_produto=?", chave)
         elif escolhaTabela == 5: # Pedidos
-            pass
+            print("ATENÇÃO! Todos os registros de produtos pedidos vinculados à este pedido serão excluídos!")
+            chave = solicitar_inputs('pedido', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("DELETE FROM pedidos WHERE id_pedido=?", chave)
         elif escolhaTabela == 6: # Vendas
-            pass
+            print("ATENÇÃO! Todos os registros de produtos vendidos vinculados à este pedido serão excluídos!")
+            chave = solicitar_inputs('venda', 'chave')
+            with cursor_banco() as cursor:
+                cursor.execute("DELETE FROM vendas WHERE id_venda=?", chave)
 
     # 5 - Registrar venda
     # Se o produto não existe na estabelecimento produtos ou quantidadeVendida < quantidadeEstoque, bloqueia a venda, não permite
     # Avisa e volta para cadastro de produtos, (da um continue)
-    
     # Operações de negócios -> CRUD das vendas
     if escolhaInicial == 5:
         print('Venda')
