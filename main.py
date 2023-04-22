@@ -50,9 +50,16 @@ while True:
             id_fornecedor = solicitar_inputs('fornecedor', 'chave')
             
             with cursor_banco() as cursor:
-                cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario,id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
+                cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario, id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
+                # Fazer um código para mostrar o ID do pedido criado, para que o usuário possa referenciá-lo nas operações de negócios.
         elif escolhaTabela == 6: # Vendas
-            pass
+            data = datetime.now().strftime('%d/%m/%Y %H:%M')
+            id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+            id_funcionario = solicitar_inputs('funcionario', 'chave')
+            
+            with cursor_banco() as cursor:
+                cursor.execute("INSERT INTO vendas (data_venda, id_estabelecimento, id_funcionario) VALUES (?, ?, ?)", data, id_estabelecimento, id_funcionario)
+                # Fazer um código para mostrar o ID do pedido criado, para que o usuário possa referenciá-lo nas operações de negócios.
     
     # 2 - Consulta (SELECTS)
     while escolhaInicial == 2 and escolhaTabela != 0:
@@ -96,9 +103,9 @@ while True:
             print_tabulado(query, ['ID Produto', 'Nome', 'Descrição'])
         elif escolhaTabela == 5: # Pedido
             query = query_banco(""" SELECT 	ped.id_pedido, COUNT(pedprod.id_produto) AS produtos, ped.data_pedido,
-                                    ped.id_estabelecimento, ped.id_funcionario, ped.id_fornecedor
+                                            ped.id_estabelecimento, ped.id_funcionario, ped.id_fornecedor
                                     FROM pedidos ped
-                                    INNER JOIN pedidos_produtos pedprod ON pedprod.id_pedido = ped.id_pedido
+                                    LEFT JOIN pedidos_produtos pedprod ON pedprod.id_pedido = ped.id_pedido
                                     GROUP BY ped.id_pedido, ped.data_pedido, ped.id_estabelecimento, ped.id_funcionario, ped.id_fornecedor
                                     ORDER BY ped.id_pedido ASC
                                 """)
@@ -107,7 +114,7 @@ while True:
             query = query_banco(""" SELECT	vendas.id_venda, COUNT(venprod.id_produto) AS produtos, vendas.data_venda,
                                     vendas.id_estabelecimento, vendas.id_funcionario
                                     FROM vendas
-                                    INNER JOIN vendas_produtos venprod ON venprod.id_venda = vendas.id_venda
+                                    LEFT JOIN vendas_produtos venprod ON venprod.id_venda = vendas.id_venda
                                     GROUP BY vendas.id_venda, vendas.data_venda, vendas.id_estabelecimento, vendas.id_funcionario
                                     ORDER BY vendas.id_venda
                                 """)
