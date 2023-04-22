@@ -44,7 +44,13 @@ while True:
             with connect_banco() as cursor:
                 cursor.execute('INSERT INTO produtos (nome, descricao)  VALUES (?, ?)', nome, descricao)
         elif escolhaTabela == 5: # Pedidos
-            pass
+            data = datetime.now().strftime('%d/%m/%Y %H:%M')
+            id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+            id_funcionario = solicitar_inputs('funcionario', 'chave')
+            id_fornecedor = solicitar_inputs('fornecedor', 'chave')
+            
+            with cursor_banco() as cursor:
+                cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario,id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
         elif escolhaTabela == 6: # Vendas
             pass
     
@@ -156,21 +162,15 @@ while True:
     # 5 - Registrar venda
     # Se o produto não existe na estabelecimento produtos ou quantidadeVendida < quantidadeEstoque, bloqueia a venda, não permite
     # Avisa e volta para cadastro de produtos, (da um continue)
+    
+    # Operações de negócios -> CRUD das vendas
     if escolhaInicial == 5:
         print('Venda')
         pass
 
     # 6 - Realizar pedido
+    # Operações de negócios -> CRUD dos pedidos
     if escolhaInicial == 6:
-        data = datetime.now().strftime('%d/%m/%Y %H:%M')
-        id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
-        id_funcionario = solicitar_inputs('funcionario', 'chave')
-        id_fornecedor = solicitar_inputs('fornecedor', 'chave')
-        
-        with cursor_banco() as cursor:
-            cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario,id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
-            id_pedido = cursor.fetchone()[0]
-
         contador = 0
         registroHistorico = []
         while True: # Cadastro de produtos no pedido
@@ -178,7 +178,6 @@ while True:
             id_produto = int_input("Informe o ID do Produto (0 para cancelar): ")
             valor_un = float(input("Informe o valor unitário do produto: "))
             quantidadePedida = int_input("Informe a quantidade de produtos comprados: ")
-
 
             # Validação dos inputs
             if valor_un <= 0:
@@ -215,7 +214,7 @@ while True:
                 with cursor_banco() as cursor: # MUDAR O SELECT PARA PRODUTOS
                     cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto}")
                     quantidadeAtual = cursor.fetchone()[0]
-                if not quantidadeAtual: # Produto não cadastrado na base -> vai se fude, não está cadastrado, abrir margem para cadastrar na tabela produtos depois e inserir no pedido
+                if not quantidadeAtual: # Produto não cadastrado na base -> não está cadastrado, abrir margem para cadastrar na tabela produtos depois e inserir no pedido
                     print('Produto não existe. Deseja cadastrar?')
                     produtoExiste = False
                 else:
