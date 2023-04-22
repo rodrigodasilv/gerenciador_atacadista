@@ -146,9 +146,20 @@ while True:
             with cursor_banco() as cursor:
                 cursor.execute(f'UPDATE produtos SET nome = ?, descricao = ? WHERE id_produto = ?', nome, descricao, chave)
         elif escolhaTabela == 5: # Pedidos
-            pass
+            id_pedido = solicitar_inputs('pedido', 'chave')
+            id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+            id_funcionario = solicitar_inputs('funcionario', 'chave')
+            id_fornecedor = solicitar_inputs('fornecedor', 'chave')
+            
+            with cursor_banco() as cursor:
+                cursor.execute("UPDATE pedidos SET id_estabelecimento = ?, id_funcionario = ?, id_fornecedor = ? WHERE id_pedido = ?", id_estabelecimento, id_funcionario, id_fornecedor, id_pedido)
         elif escolhaTabela == 6: # Vendas
-            pass
+            id_venda = solicitar_inputs('venda', 'chave')
+            id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+            id_funcionario = solicitar_inputs('funcionario', 'chave')
+            
+            with cursor_banco() as cursor:
+                cursor.execute("UPDATE vendas SET id_estabelecimento = ?, id_funcionario = ? WHERE id_venda = ?", id_estabelecimento, id_funcionario, id_venda)
 
     # 4 - Remoção (DELETES)
     while escolhaInicial == 4 and escolhaTabela != 0:
