@@ -27,30 +27,34 @@ while True:
         escolhaTabela = menuTabelas()
         if escolhaTabela == 0: continue
 
-        if escolhaTabela == 1:
+        if escolhaTabela == 1: # Estabelecimento
             cnpj, telefone = solicitar_inputs('estabelecimento', 'cnpj', 'telefone')
             query_banco(f"INSERT INTO estabelecimentos (telefone, cnpj) VALUES ({cnpj}, {telefone});")
-        elif escolhaTabela == 2:
+        elif escolhaTabela == 2: # Funcionário
             nome, cpf = solicitar_inputs('funcionario', 'nome', 'cpf')
             id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
             with cursor_banco() as cursor:
                 cursor.execute("INSERT INTO funcionarios (nome, cpf, id_estabelecimento) VALUES (?, ?, ?)", nome, cpf, id_estabelecimento)
-        elif escolhaTabela == 3:
+        elif escolhaTabela == 3: # Fornecedor
             nome, cnpj, telefone, email = solicitar_inputs('fornecedor', 'nome', 'cnpj', 'telefone', 'email')
             with connect_banco() as cursor:
                 cursor.execute('INSERT INTO fornecedores (nome, cnpj, telefone, email) VALUES (?, ?, ?, ?)', nome, cnpj, telefone, email)
-        elif escolhaTabela == 4:
+        elif escolhaTabela == 4: # Produto
             nome, descricao = solicitar_inputs('produto', 'nome', 'descricao')
             with connect_banco() as cursor:
                 cursor.execute('INSERT INTO produtos (nome, descricao)  VALUES (?, ?)', nome, descricao)
-        
+        elif escolhaTabela == 5: # Pedidos
+            pass
+        elif escolhaTabela == 6: # Vendas
+            pass
+    
     # 2 - Consulta (SELECTS)
     while escolhaInicial == 2 and escolhaTabela != 0:
         escolhaTabela = menuTabelas()
         if escolhaTabela == 0: continue
 
         break_line()
-        if escolhaTabela == 1:
+        if escolhaTabela == 1: # Estabelecimento
             query = query_banco(""" SELECT e.id_estabelecimento,
                                     CASE LENGTH(e.telefone) WHEN 11
                                     THEN '(' || substr(e.telefone,0,3) || ') ' || SUBSTR(e.telefone,3,5) || '-' || SUBSTR(e.telefone,8,15)
@@ -61,7 +65,7 @@ while True:
                                     
                                 """)
             print_tabulado(query, ['ID Estabelecimento', 'Telefone', 'CNPJ'])
-        elif escolhaTabela == 2:
+        elif escolhaTabela == 2: # Funcionário
             query = query_banco(""" SELECT f.id_funcionario, f.nome,
                                     CASE LENGTH(f.cpf) WHEN 11
                                     THEN SUBSTR(f.cpf,0,4) || '.' || SUBSTR(f.cpf,4,3) || '.' || SUBSTR(f.cpf,7,3) || '-' ||  SUBSTR(f.cpf,10,2)
@@ -70,7 +74,7 @@ while True:
                                     e.cnpj FROM funcionarios f JOIN estabelecimentos e ON e.id_estabelecimento = f.id_estabelecimento
                                 """)
             print_tabulado(query, ['ID Funcionário', 'Nome', 'CPF', 'ID Estabelecimento', 'CNPJ Estabelecimento'])
-        elif escolhaTabela == 3:
+        elif escolhaTabela == 3: # Fornecedor
             query = query_banco(""" SELECT fo.id_fornecedor, fo.nome,
                                     CASE LENGTH(fo.cnpj) WHEN 14
                                     THEN SUBSTR(fo.cnpj,1,2) || '.' || SUBSTR(fo.cnpj,3,3) || '.' || SUBSTR(fo.cnpj,6,3) || '/' || SUBSTR(fo.cnpj,9,4) || '-' || SUBSTR(fo.cnpj,13,2)
@@ -81,9 +85,14 @@ while True:
                                     fo.email FROM fornecedores fo
                                 """)
             print_tabulado(query, ['ID Fornecedor', 'Nome', 'CNPJ', 'Telefone', 'E-mail'])
-        elif escolhaTabela == 4:
+        elif escolhaTabela == 4: # Produto
             query = query_banco("SELECT p.* FROM produtos p")
             print_tabulado(query, ['ID Produto', 'Nome', 'Descrição'])
+        elif escolhaTabela == 5: # Pedido
+            pass
+        elif escolhaTabela == 6: # Venda
+            pass
+
         break_line()
         pause()
     
@@ -92,49 +101,57 @@ while True:
         escolhaTabela = menuTabelas()
         if escolhaTabela == 0: continue
 
-        if escolhaTabela == 1:
+        if escolhaTabela == 1: # Estabelecimento
             chave, cnpj, telefone = solicitar_inputs('estabelecimento', 'chave', 'cnpj', 'telefone')
             with cursor_banco() as cursor:
                 cursor.execute(f"UPDATE estabelecimentos SET telefone = ?, cnpj = ? WHERE id_estabelecimento = ?", telefone, cnpj, chave)
-        elif escolhaTabela == 2:
+        elif escolhaTabela == 2: # Funcionário
             chave, nome, cpf = solicitar_inputs('funcionario', 'chave', 'nome', 'cpf')
             id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
             with cursor_banco() as cursor:
                 cursor.execute('UPDATE funcionarios SET nome = ?, cpf = ?, id_estabelecimento = ? WHERE id_funcionario = ?', nome, cpf, id_estabelecimento, chave)
-        elif escolhaTabela == 3:
+        elif escolhaTabela == 3: # Fornecedor
             chave, nome, cnpj, telefone, email = solicitar_inputs('fornecedor', 'chave', 'nome', 'cnpj', 'telefone', 'email')
             with cursor_banco() as cursor:
                 cursor.execute('UPDATE fornecedores SET nome = ?, cnpj = ?, telefone = ?, email = ? WHERE id_fornecedor = ?', nome, cnpj, telefone, email, chave)
-        elif escolhaTabela == 4:
+        elif escolhaTabela == 4: # Produto
             chave, nome, descricao = solicitar_inputs('produto', 'chave', 'nome', 'descricao')
             with cursor_banco() as cursor:
                 cursor.execute(f'UPDATE produtos SET nome = ?, descricao = ? WHERE id_produto = ?', nome, descricao, chave)
+        elif escolhaTabela == 5: # Pedidos
+            pass
+        elif escolhaTabela == 6: # Vendas
+            pass
 
     # 4 - Remoção (DELETES)
     while escolhaInicial == 4 and escolhaTabela != 0:
         escolhaTabela = menuTabelas()
         if escolhaTabela == 0: continue
 
-        if escolhaTabela == 1:
+        if escolhaTabela == 1: # Estabelecimento
             print("ATENÇÃO! Todos os funcionários, pedidos, vendas e produtos vinculados a este estabelecimento serão excluídos!")
             chave = solicitar_inputs('estabelecimento', 'chave')
             with cursor_banco() as cursor:
                 cursor.execute("DELETE FROM estabelecimentos WHERE id_estabelecimento=?", chave)
-        elif escolhaTabela == 2:
+        elif escolhaTabela == 2: # Funcionário
             print("ATENÇÃO! Todos os pedidos e vendas vinculados a este funcionário serão excluídos!")
             chave = solicitar_inputs('funcionario', 'chave')
             with cursor_banco() as cursor:
                 cursor.execute("DELETE FROM funcionarios WHERE id_funcionario=?", chave)
-        elif escolhaTabela == 3:
+        elif escolhaTabela == 3: # Fornecedor
             print("ATENÇÃO! Todos os pedidos vinculados a este fornecedor serão excluídos!")
             chave = solicitar_inputs('fornecedor', 'chave')
             with cursor_banco() as cursor:
                 cursor.execute("DELETE FROM fornecedores WHERE id_fornecedor=?", chave)
-        elif escolhaTabela == 4:
+        elif escolhaTabela == 4: # Produto
             print("ATENÇÃO! Todos os produtos de pedidos, compras ou estabelecimentos vinculados a este serão excluídos!")
             chave = solicitar_inputs('produto', 'chave')
             with cursor_banco() as cursor:
                 cursor.execute("DELETE FROM produtos WHERE id_produto=?", chave)
+        elif escolhaTabela == 5: # Pedidos
+            pass
+        elif escolhaTabela == 6: # Vendas
+            pass
 
     # 5 - Registrar venda
     # Se o produto não existe na estabelecimento produtos ou quantidadeVendida < quantidadeEstoque, bloqueia a venda, não permite
