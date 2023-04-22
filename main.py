@@ -95,9 +95,23 @@ while True:
             query = query_banco("SELECT p.* FROM produtos p")
             print_tabulado(query, ['ID Produto', 'Nome', 'Descrição'])
         elif escolhaTabela == 5: # Pedido
-            pass
+            query = query_banco(""" SELECT 	ped.id_pedido, COUNT(pedprod.id_produto) AS produtos, ped.data_pedido,
+                                    ped.id_estabelecimento, ped.id_funcionario, ped.id_fornecedor
+                                    FROM pedidos ped
+                                    INNER JOIN pedidos_produtos pedprod ON pedprod.id_pedido = ped.id_pedido
+                                    GROUP BY ped.id_pedido, ped.data_pedido, ped.id_estabelecimento, ped.id_funcionario, ped.id_fornecedor
+                                    ORDER BY ped.id_pedido ASC
+                                """)
+            print_tabulado(query, ['ID Pedido', 'Produtos pedidos', 'Data do pedido', 'ID Estabelecimento', 'ID Funcionario', 'ID Fornecedor'])
         elif escolhaTabela == 6: # Venda
-            pass
+            query = query_banco(""" SELECT	vendas.id_venda, COUNT(venprod.id_produto) AS produtos, vendas.data_venda,
+                                    vendas.id_estabelecimento, vendas.id_funcionario
+                                    FROM vendas
+                                    INNER JOIN vendas_produtos venprod ON venprod.id_venda = vendas.id_venda
+                                    GROUP BY vendas.id_venda, vendas.data_venda, vendas.id_estabelecimento, vendas.id_funcionario
+                                    ORDER BY vendas.id_venda
+                                """)
+            print_tabulado(query, ['ID Venda', 'Produtos vendidos', 'Data da venda', 'ID Estabelecimento', 'ID Funcionario'])
 
         break_line()
         pause()
