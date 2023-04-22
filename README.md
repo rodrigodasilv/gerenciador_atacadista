@@ -1,5 +1,9 @@
 # Gerenciador atacadista
 
+### Glossário
+
+Como serão adicionados mais conteúdos nesse documento, aqui será feito um glossário para que o usuário se localize com mais facilidade.
+
 ### Introdução
 
 O domínio escolhido para o trabalho de BAN2 foi um mercado atacadista, possuindo várias instalações em diferentes localidades e necessitando gerenciar entradas e saídas de produtos, vinculando-os com seus respectivos funcionários, fornecedores e estabelecimentos. 
