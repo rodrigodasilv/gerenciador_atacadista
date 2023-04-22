@@ -52,6 +52,8 @@ def menuTabelas(): # Apenas das tabelas entidade
     print("2 - Funcionários")
     print("3 - Fornecedores")
     print("4 - Produtos")
+    print("5 - Pedidos")
+    print("6 - Vendas")
     print("0 - Voltar")
 
     break_line()
