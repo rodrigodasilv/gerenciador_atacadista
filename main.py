@@ -1,13 +1,11 @@
 from utilities import *
-import pyodbc
+import psycopg2
 from tabulate import tabulate
 from datetime import datetime
 import os
 
-# Ver com Rodrigo
-# Operações de negócio e relatórios -> CRUD das tabelas associativas
 
-# -> Cancelar venda e cancelar pedido (acho que não precisa)
+# -> Cancelar venda e cancelar pedido
 # -> Relatórios com condicionais? Ex.: Vendas por funcionario em certa data
 # -> Validação de CNPJ e CPF
 #       -> Após isso, precisa verificar os "solicitar_inputs()", pois caso venha um valor invalidado, precisa cancelar o processo
@@ -198,116 +196,124 @@ while True:
                 cursor.execute("DELETE FROM vendas WHERE id_venda=?", chave)
 
     # 5 - Registrar venda
-    # Se o produto não existe na estabelecimento produtos ou quantidadeVendida < quantidadeEstoque, bloqueia a venda, não permite
-    # Avisa e volta para cadastro de produtos, (da um continue)
-    # Operações de negócios -> CRUD das vendas
     if escolhaInicial == 5:
-        print('Venda')
-        pass
+        registros = []
+
+        data = datetime.now().strftime('%d/%m/%Y %H:%M')
+        id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+        id_funcionario = solicitar_inputs('funcionario', 'chave')
+
+        with cursor_banco() as cursor:
+            cursor.execute("INSERT INTO vendas (data_venda, id_estabelecimento, id_funcionario) VALUES (?, ?, ?) RETURNING id_venda", data, id_estabelecimento, id_funcionario)
+            id_venda = cursor.fetchone()[0]
+
+        while True:
+            clear()
+
+            id_produto = int_input("Informe o ID do Produto (0 para finalizar): ")
+
+            # Cancelar
+            if id_produto == 0:
+                print("Finalizando...")
+                break
+
+            # Verificar se o produto existe
+            with cursor_banco() as cursor:
+                cursor.execute(f"SELECT 1 FROM produtos WHERE id_produto={id_produto};")
+                produtoExiste = cursor.fetchone()
+            if not produtoExiste:
+                print('Produto não existe na base')
+                continue
+            
+            # Verificar se o produto está cadastro no estabelecimento
+            with cursor_banco() as cursor:
+                cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto} AND id_estabelecimento={id_estabelecimento}")
+                quantidadeEstoque = cursor.fetchone()[0]
+            if not quantidadeEstoque:
+                print("Produto não cadastrado no estoque do estabelecimento.")
+                continue
+
+            valor_un = float(input("Informe o valor unitário do produto: "))
+            quantidadeVendida = int_input("Informe a quantidade de produtos vendidos: ")
+
+            # Validação dos inputs
+            if valor_un <= 0 or quantidadeVendida <= 0:
+                print('Quantidade pedida invalida.')
+                continue
+
+            if quantidadeVendida > quantidadeEstoque:
+                print('Quantidade pedida para venda maior que a disponível em estoque')
+                print(f'Quantidade disponível: {quantidadeEstoque}')
+
+            registros.append((id_produto, valor_un, quantidadeVendida))
+
+        print(registros)
+        with cursor_banco() as cursor:
+            for registro in registros:
+                id_produto = registro[0]
+                valor_un = registro[1]
+                quantidadeVendida = registro[2]
+                cursor.execute(f"INSERT INTO vendas_produtos (quantidade, valor_unitario, id_venda, id_produto) VALUES ({quantidadeVendida}, {valor_un}, {id_venda}, {id_produto})")
+                cursor.execute(f"UPDATE estabelecimentos_produtos SET quantidade=quantidade-{quantidadeVendida} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
 
     # 6 - Realizar pedido
-    # Operações de negócios -> CRUD dos pedidos
     if escolhaInicial == 6:
-        contador = 0
-        registroHistorico = []
-        while True: # Cadastro de produtos no pedido
+        registros = []
+
+        data = datetime.now().strftime('%d/%m/%Y %H:%M')
+        id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
+        id_funcionario = solicitar_inputs('funcionario', 'chave')
+        id_fornecedor = solicitar_inputs('fornecedor', 'chave')
+
+        with cursor_banco() as cursor:
+            cursor.execute("INSERT INTO pedidos (data_pedido, id_estabelecimento, id_funcionario, id_fornecedor) VALUES (?, ?, ?, ?) RETURNING id_pedido", data, id_estabelecimento, id_funcionario, id_fornecedor)
+            id_pedido = cursor.fetchone()[0]
+
+        while True:
             clear()
-            id_produto = int_input("Informe o ID do Produto (0 para cancelar): ")
+
+            id_produto = int_input("Informe o ID do Produto (0 para finalizar): ")
+
+            # Cancelar
+            if id_produto == 0:
+                print("Finalizando...")
+                break
+
+            # Verificar se o produto existe
+            with cursor_banco() as cursor:
+                cursor.execute(f"SELECT 1 FROM produtos WHERE id_produto={id_produto};")
+                produtoExiste = cursor.fetchone()[0]
+            if not produtoExiste:
+                print('Produto não existe na base')
+                continue
+            
+            # Verificar se o produto está cadastro no estabelecimento
+            with cursor_banco() as cursor:
+                cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto} AND id_estabelecimento={id_estabelecimento}")
+                produtoCadastradoEstabelecimento = cursor.fetchone()[0]
+            if not produtoCadastradoEstabelecimento:
+                cursor.execute(f"INSERT INTO estabelecimentos_produtos VALUES ({id_estabelecimento}, {id_produto}, 0);")
+
             valor_un = float(input("Informe o valor unitário do produto: "))
             quantidadePedida = int_input("Informe a quantidade de produtos comprados: ")
 
             # Validação dos inputs
-            if valor_un <= 0:
+            if valor_un <= 0 or quantidadePedida <= 0:
                 print('Quantidade pedida invalida.')
                 continue
-            if quantidadePedida <= 0:
-                print('Quantidade pedida invalida.')
-                continue
-            
-            # Confirmação
-            print(f'ID Produto: {id_produto}\nValor un.: {valor_un}\nQuantidade: {quantidadePedida}\n\nDeseja confirmar?')
-            escolha = int_input('1 - Sim.\n2 - Não.\n3 - Cancelar pedido.')
-            if inserirMaisProduto == 2:
-                continue
-            if inserirMaisProduto == 3:
-                for registro in registroHistorico:
-                    with cursor_banco() as cursor:
-                        cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
-                        quantidadeAtual = cursor.fetchone()[0] - registro[1]
-                    query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
-                query_banco(f'DELETE FROM pedidos WHERE id_pedido = {id_pedido}')
-                break
 
+            registros.append((id_produto, valor_un, quantidadePedida))
 
-            # Seleciona a quantidade atual em estoque -> mudar nome da variável de quantidadeAtual para estoqueAtual
-            with cursor_banco() as cursor:
-                cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto} AND id_estabelecimento={id_estabelecimento}")
-                quantidadeAtual = cursor.fetchone()
-            if quantidadeAtual:
-                quantidadeAtual = quantidadeAtual[0]
-
-            # Produto não cadastrado neste estabelecimento
-            if not quantidadeAtual:
-                with cursor_banco() as cursor: # MUDAR O SELECT PARA PRODUTOS
-                    cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={id_produto}")
-                    quantidadeAtual = cursor.fetchone()[0]
-                if not quantidadeAtual: # Produto não cadastrado na base -> não está cadastrado, abrir margem para cadastrar na tabela produtos depois e inserir no pedido
-                    print('Produto não existe. Deseja cadastrar?')
-                    produtoExiste = False
-                else:
-                    print('Produto não está cadastrado neste estabelecimento, deseja associar o produto?')
-                    # Cadastrar produto no estabelecimento_produtos com estoque zerados
-                    produtoExiste = True
-    
-                escolha = int_input('1 - Cadastrar produto.\n2 - Finalizar pedido.\n3 - Cancelar pedido.')
-                if escolha == 1:
-                    if produtoExiste:
-                        pass
-                    if not produtoExiste:
-                        nome, descricao = solicitar_inputs('produto', 'nome', 'descricao')
-                        query_banco(f'INSERT INTO produtos (nome, descricao)  VALUES ({nome}, {descricao});')
-                if escolha == 2:
-                    break
-                if escolha == 3:
-                    for registro in registroHistorico:
-                        with cursor_banco() as cursor:
-                            cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
-                            quantidadeAtual = cursor.fetchone()[0]  - registro[1]
-                        query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
-                    query_banco(f'DELETE FROM pedidos WHERE id_pedido = {id_pedido}')
-                    break
-            
-            # Produto cadastrado e inserido no pedido
-            with cursor_banco() as cursor:
-                cursor.execute("INSERT INTO pedidos_produtos (quantidade, valor_unitario, id_produto, id_pedido) VALUES (?, ?, ?, ?) RETURNING id_produto;", quantidadePedida, valor_un, id_produto, id_pedido)
-                id_produto = cursor.fetchone()[0]
-            
-            registroHistorico.append((id_produto, quantidadePedida))
-
-            # Estoque do produto atualizado
-            quantidadeAtual += quantidadePedida
-            query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
-            contador += 1
-
-            # Cadastro de mais produtos ou cancelamento da compra
-            inserirMaisProduto = int_input("Deseja inserir mais um produto nesse pedido?\n1 - Sim\n2 - Não\n3 - Cancelar compra ")
-            if inserirMaisProduto == 2:
-                break
-            if inserirMaisProduto == 3:
-                for registro in registroHistorico:
-                    with cursor_banco() as cursor:
-                        cursor.execute(f"SELECT quantidade FROM estabelecimentos_produtos WHERE id_produto={registro[0]} AND id_estabelecimento={id_estabelecimento}")
-                        quantidadeAtual = cursor.fetchone()[0] - registro[1]
-                    query_banco(f"UPDATE estabelecimentos_produtos SET quantidade={quantidadeAtual} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
-                query_banco(f'DELETE FROM pedidos WHERE id_pedido = {id_pedido}')
-                break
-            
-            print(5)
-        if contador == 0 and not quantidadeAtual:
-            print('Nenhum produto cadastrado no pedido, cancelando ordem de compra.')
-            query_banco(f"DELETE FROM pedidos WHERE id_pedido={id_pedido}")
-
-        # Tirar cancelamento durante cadastro
+        print(registros)
+        with cursor_banco() as cursor:
+            for registro in registros:
+                id_produto = registro[0]
+                valor_un = registro[1]
+                quantidadePedida = registro[2]
+                #print(type(id_produto), type(valor_un), type(quantidadePedida), type(id_pedido))
+                #print(id_produto, valor_un, quantidadePedida, id_pedido)
+                cursor.execute(f"INSERT INTO pedidos_produtos (quantidade, valor_unitario, id_produto, id_pedido) VALUES ({quantidadePedida}, {valor_un}, {id_produto}, {id_pedido})")
+                cursor.execute(f"UPDATE estabelecimentos_produtos SET quantidade=quantidade+{quantidadePedida} WHERE id_estabelecimento={id_estabelecimento} AND id_produto={id_produto}")
 
 
     # 7 - Relatórios
