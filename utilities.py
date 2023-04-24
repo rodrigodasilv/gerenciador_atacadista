@@ -2,20 +2,14 @@
 # Funções gerais
 # Alunos: Guilherme Alves && Rodrigo da Silva
 
-import pyodbc
+import psycopg2
 import os
 from utilities import *
 from tabulate import tabulate
 
-driver='PostgreSQL ANSI(x64)'
-host='127.0.0.1'
-port='5432'
 dbname='db_atacadista'
 user='postgres'
 password='123'
-
-# Driver MySQL ODBC 8.0 ANSI Driver
-# MariaDB -> root / secret
 
 def pause():
     os.system("pause")
@@ -73,7 +67,7 @@ def menuRelatorios():
     return escolha
 
 def connect_banco():
-    return pyodbc.connect('DRIVER={' + driver + '};SERVER='+host+';PORT=' + port + ';DATABASE='+dbname+';UID=' + user + ';PWD=' + password + ';', autocommit=False)
+    return psycopg2.connect(f"dbname={dbname} user={user} password={password}")
 
 def cursor_banco():
     return connect_banco().cursor()
@@ -81,7 +75,8 @@ def cursor_banco():
 def query_banco(query):
     with cursor_banco() as cursor:
         if 'SELECT' in query.upper():
-            return cursor.execute(query).fetchall() 
+            cursor.execute(query)
+            return cursor.fetchall() 
         else:
             cursor.execute(query) # Aparentemente não precisa fazer cursor().commit()
             print("Query executada.")
