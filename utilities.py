@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 dbname='db_atacadista'
 user='postgres'
-password='123'
+password='udesc'
 
 def pause():
     os.system("pause")
@@ -39,7 +39,7 @@ def menuInicial():
     escolha = int_input("Informe a opção: ")
     return escolha
 
-def menuTabelas(): # Apenas das tabelas entidade
+def menuTabelas(espec=0): # Apenas das tabelas entidade
     clear()
     print("Informe a opção desejada:")
     print("1 - Estabelecimentos")
@@ -48,6 +48,11 @@ def menuTabelas(): # Apenas das tabelas entidade
     print("4 - Produtos")
     print("5 - Pedidos")
     print("6 - Vendas")
+
+    if espec==1:
+        print("7 - Produtos dos pedidos")
+        print("8 - Produtos das vendas")
+
     print("0 - Voltar")
 
     break_line()
@@ -67,7 +72,9 @@ def menuRelatorios():
     return escolha
 
 def connect_banco():
-    return psycopg2.connect(f"dbname={dbname} user={user} password={password}")
+    con = psycopg2.connect(f"dbname={dbname} user={user} password={password}")
+    con.autocommit = True
+    return con
 
 def cursor_banco():
     return connect_banco().cursor()
@@ -78,8 +85,9 @@ def query_banco(query):
             cursor.execute(query)
             return cursor.fetchall() 
         else:
-            cursor.execute(query) # Aparentemente não precisa fazer cursor().commit()
+            cursor.execute(query) 
             print("Query executada.")
+            print(query)
 
 def print_tabulado(query, header):
     print(tabulate(query, headers=header))
@@ -95,14 +103,8 @@ def solicitar_inputs(persona, *inputs):
                 print('ID invalido!')
         if _input == 'cnpj':
             entrada = input(f'Informe o CNPJ do {persona}: ')
-            #if not valida_cnpj(entrada):
-            #    print('CNPJ invalido!')
-            #    entrada = None
         if _input == 'cpf':
             entrada = input(f'Informe o CPF do {persona}: ')
-            #if not valida_cpf(entrada):
-            #   print('CPF invalido!')
-            #    entrada = None
         if _input == 'descricao':
             entrada = input(f"Informe a descricao do {persona}: ")
         if _input == 'email':
@@ -122,72 +124,6 @@ def solicitar_inputs(persona, *inputs):
         return lista_inputs[0]
 
     return lista_inputs
-
-def valida_cnpj(cnpj):
-    cnpj = str(cnpj)
-    # Remove caracteres não numéricos, como traços e pontos
-    cnpj = ''.join(filter(str.isdigit, cnpj))
-
-    # Verifica se o CNPJ possui 14 dígitos
-    if len(cnpj) != 14:
-        return False
-
-    # Algoritmo de validação de CNPJ por digito verificador
-    digito_verificador = [0, 0]
-    pesos = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    soma = 0
-    for index, digito in enumerate(cnpj[:12]):
-        soma += int(digito) * pesos[index]
-    num = soma % 11
-    if num < 2:
-        digito_verificador[0] = 0
-    else:
-        digito_verificador[0] = 11 - num
-
-    pesos = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    soma = 0
-    for index, digito in enumerate(cnpj[:12] + str(digito_verificador[0])):
-        soma += int(digito) * pesos[index]
-    num = soma % 11
-    if num < 2:
-        digito_verificador[1] = 0
-    else:
-        digito_verificador[1] = 11 - num
-    
-    if digito_verificador[0] == int(cnpj[12]) and digito_verificador[1] == int(cnpj[13]):
-        return True
-    return False
-
-def valida_cpf(cpf):
-    cpf = str(cpf)
-    # Remove caracteres não numéricos
-    cpf = ''.join(filter(str.isdigit, cpf))
-
-    # Verifica se o CPF possui 11 dígitos
-    if len(cpf) != 11:
-        return False
-
-    # Calcula o primeiro dígito verificador
-    soma = 0
-    peso = 10
-    for i in range(9):
-        soma += int(cpf[i]) * peso
-        peso -= 1
-    digito1 = (11 - soma % 11) if soma % 11 >= 2 else 0
-
-    # Calcula o segundo dígito verificador
-    soma = 0
-    peso = 11
-    for i in range(10):
-        soma += int(cpf[i]) * peso
-        peso -= 1
-    digito2 = (11 - soma % 11) if soma % 11 >= 2 else 0
-
-    # Verifica se os dígitos verificadores calculados são iguais aos fornecidos no CPF
-    if int(cpf[9]) == digito1 and int(cpf[10]) == digito2:
-        return True
-    else:
-        return False
 
 def valida_email(email):
     if email.count("@") == 1 and "." in email.split("@")[1]:
