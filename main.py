@@ -233,7 +233,7 @@ while True:
 
             # Verificar se o produto existe
             with cursor_banco() as cursor:
-                cursor.execute("SELECT 1 FROM produtos WHERE id_produto=%s",(id_produto))
+                cursor.execute(f"SELECT 1 FROM produtos WHERE id_produto={id_produto}")
                 produtoExiste = cursor.fetchone()
             if not produtoExiste:
                 print('Produto não existe na base')
@@ -295,7 +295,7 @@ while True:
 
             # Verificar se o produto existe
             with cursor_banco() as cursor:
-                cursor.execute("SELECT 1 FROM produtos WHERE id_produto=%s",(id_produto))
+                cursor.execute(f"SELECT 1 FROM produtos WHERE id_produto={id_produto}",)
                 produtoExiste = cursor.fetchone()[0]
             if not produtoExiste:
                 print('Produto não existe na base')
