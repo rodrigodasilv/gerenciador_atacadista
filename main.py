@@ -4,16 +4,6 @@ from tabulate import tabulate
 from datetime import datetime
 import os
 
-
-# -> Cancelar venda e cancelar pedido
-# -> Relatórios com condicionais? Ex.: Vendas por funcionario em certa data
-# -> Validação de CNPJ e CPF
-#       -> Após isso, precisa verificar os "solicitar_inputs()", pois caso venha um valor invalidado, precisa cancelar o processo
-#       Ex.: CNPJ invalido no cadastro de estabelecimento, retorna uma tupla (,'23123123'), o que vai causar erro no insert, portanto deve ser validado
-#       -> Essa validação também deve ser feito para os UPDATES e DELETES, pois quebra a execução do programa
-
-# Adicionar consulta de estoque
-
 while True:
     escolhaInicial = menuInicial()
     if escolhaInicial == 0: break
@@ -205,12 +195,18 @@ while True:
         elif escolhaTabela == 5: # Pedidos
             print("ATENÇÃO! Todos os registros de produtos pedidos vinculados à este pedido serão excluídos!")
             chave = solicitar_inputs('pedido', 'chave')
+            registros = query_banco(f"SELECT pp.quantidade,pp.id_produto,p.id_estabelecimento  FROM pedidos_produtos pp join pedidos p on p.id_pedido = pp.id_pedido where pp.id_pedido={chave}")
             with cursor_banco() as cursor:
+                for registro in registros:
+                    cursor.execute("UPDATE estabelecimentos_produtos SET quantidade=quantidade-%s WHERE id_estabelecimento= %s AND id_produto=%s",(registro[0],registro[2],registro[1]))
                 cursor.execute(f"DELETE FROM pedidos WHERE id_pedido={chave}")
         elif escolhaTabela == 6: # Vendas
             print("ATENÇÃO! Todos os registros de produtos vendidos vinculados à este pedido serão excluídos!")
             chave = solicitar_inputs('venda', 'chave')
+            registros = query_banco(f"SELECT vp.quantidade,vp.id_produto,v.id_estabelecimento  FROM vendas_produtos vp join vendas v on v.id_venda = vp.id_venda where vp.id_venda={chave}")
             with cursor_banco() as cursor:
+                for registro in registros:
+                    cursor.execute("UPDATE estabelecimentos_produtos SET quantidade=quantidade+%s WHERE id_estabelecimento= %s AND id_produto=%s",(registro[0],registro[2],registro[1]))
                 cursor.execute(f"DELETE FROM vendas WHERE id_venda={chave}")
 
     # 5 - Registrar venda
@@ -341,36 +337,44 @@ while True:
 
         # Adicionar filtros
 
-        if escolhaRelatorio == 1: # Produtos disponíveis em cada estabelecimento -> Filtro por estabelecimento, detalhar produtos
-            query = query_banco(""" SELECT estab.id_estabelecimento, estab.cnpj, sum(prod.id_produto)
+        if escolhaRelatorio == 1: # Produtos disponíveis em cada estabelecimento
+            id_estabelecimento = int_input('Informe o ID do estabelecimento (0 para todos estabelecimentos): ')
+            query = query_banco(f""" SELECT estab.id_estabelecimento, estab.cnpj, prod.id_produto, prod.nome,sum(prod.id_produto)
                                     FROM produtos prod
                                     INNER JOIN estabelecimentos_produtos estab_prod
                                     ON estab_prod.id_produto = prod.id_produto
                                     INNER JOIN estabelecimentos estab
                                     ON estab.id_estabelecimento = estab_prod.id_estabelecimento
-                                    GROUP BY estab.id_estabelecimento, estab.cnpj
+									where (estab.id_estabelecimento={id_estabelecimento} or 0={id_estabelecimento})
+                                    GROUP BY estab.id_estabelecimento, estab.cnpj, prod.id_produto, prod.nome
+									order by 1 asc
                                 """)
-            print_tabulado(query, ['ID Estabelecimento', 'CNPJ', 'Quantidade de produtos'])
-        elif escolhaRelatorio == 2: # Vendas por funcionário -> Filtro por data e filtro por funcionario (detalhar produtos)
-            query = query_banco(""" SELECT f.id_funcionario, f.nome, SUM(v_prod.quantidade) AS quantidade, SUM(v_prod.valor_unitario * v_prod.quantidade) AS valor_arrecadado
+            print_tabulado(query, ['ID Estabelecimento', 'CNPJ','ID Produto','Nome Produto','Quantidade de produtos'])
+        elif escolhaRelatorio == 2: # Vendas por funcionário
+            id_funcionario = int_input('Informe o ID do funcionário (0 para todos funcionários): ')
+            query = query_banco(f""" SELECT f.id_funcionario, f.nome, count(v.id_venda) AS qtd_vendas, SUM(v_prod.valor_unitario * v_prod.quantidade) AS valor_arrecadado, to_char(v.data_venda,'MM/YYYY')
                                     FROM funcionarios f
                                     INNER JOIN vendas v
                                     ON v.id_funcionario = f.id_funcionario
                                     INNER JOIN vendas_produtos v_prod
                                     ON v_prod.id_venda = v.id_venda
-                                    GROUP BY f.id_funcionario, f.nome
+                                    where (f.id_funcionario={id_funcionario} or 0={id_funcionario})
+                                    GROUP BY f.id_funcionario, f.nome, to_char(v.data_venda,'MM/YYYY')
+									order by 1 asc
                                 """)
-            print_tabulado(query, ['ID Funcionario', 'Nome', 'Quantidade vendida', 'Valor arrecadado'])
-        elif escolhaRelatorio == 3: # Compras por fornecedor -> Filtro por data e por fornecedor (detalhar produtos)
-            query = query_banco(""" SELECT f.nome, sum(ped_prod.quantidade) AS produtos, sum(ped_prod.valor_unitario * ped_prod.quantidade) AS valor_pago
+            print_tabulado(query, ['ID Funcionario', 'Nome', 'Quantidade de vendas', 'Valor arrecadado','Mês/Ano'])
+        elif escolhaRelatorio == 3: # Compras por fornecedor
+            id_fornecedor = int_input('Informe o ID do fornecedor (0 para todos fornecedores): ')
+            query = query_banco(f""" SELECT f.nome, count(ped.id_pedido) AS qtd_pedidos, sum(ped_prod.valor_unitario * ped_prod.quantidade) AS valor_pago, to_char(ped.data_pedido,'MM/YYYY')
                                     FROM fornecedores f
                                     INNER JOIN pedidos ped
                                     ON ped.id_fornecedor = f.id_fornecedor
                                     INNER JOIN pedidos_produtos ped_prod
                                     ON ped_prod.id_pedido = ped.id_pedido
-                                    GROUP BY f.nome
+                                    where (f.id_fornecedor={id_fornecedor} or 0={id_fornecedor})
+                                    GROUP BY f.nome, to_char(ped.data_pedido,'MM/YYYY')
                                 """)
-            print_tabulado(query, ['Fornecedor', 'Produtos comprados', 'Valor pago'])
+            print_tabulado(query, ['Fornecedor', 'Quantidade de pedidos', 'Valor pago','Mês/Ano'])
         
         break_line()
         pause()
