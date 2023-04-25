@@ -46,6 +46,11 @@ Instalar o Python, com a opção `Add python.exe to PATH` selecionada:
 
 ### Tutorial
 
+Alterar senha e usuário de acesso ao banco no arquivo utilities.py:
+
+![image](https://user-images.githubusercontent.com/55567123/234154236-96058abb-b2fb-49ea-a0b2-4138c77ff6a2.png)
+
+
 Abrir o CMD e utilizar o comando `cd` para alterar o diretório para a pasta que o repositório foi baixado. Após isso, utilizar o comando `pip install -r requirements.txt` para instalar as dependências do Python:
 
 ![image](https://user-images.githubusercontent.com/55567123/232244195-4b2d33c9-cf56-45df-8e41-4aa95119a8fd.png)
