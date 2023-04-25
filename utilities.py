@@ -64,7 +64,7 @@ def menuRelatorios():
     print("Informe o relatório desejado:")
     print("1 - Produtos disponíveis em cada estabelecimento")
     print("2 - Vendas por funcionário")
-    print("3 - Compras por funcionário")
+    print("3 - Compras por fornecedor")
     print("0 - Voltar")
 
     break_line()
