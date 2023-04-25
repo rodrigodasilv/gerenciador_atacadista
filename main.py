@@ -56,7 +56,7 @@ while True:
                                     CASE LENGTH(e.cnpj) WHEN 14
                                     THEN substr(e.cnpj,1,2) || '.' || SUBSTR(e.cnpj,3,3) || '.' || SUBSTR(e.cnpj,6,3) || '/' || SUBSTR(e.cnpj,9,4) || '-' || SUBSTR(e.cnpj,13,2)
                                     ELSE e.cnpj END CASE FROM estabelecimentos e
-                                    
+                                    order by 1 asc
                                 """)
             print_tabulado(query, ['ID Estabelecimento', 'Telefone', 'CNPJ'])
         elif escolhaTabela == 2: # Funcionário
@@ -69,6 +69,7 @@ while True:
                                     THEN substr(e.cnpj,1,2) || '.' || SUBSTR(e.cnpj,3,3) || '.' || SUBSTR(e.cnpj,6,3) || '/' || SUBSTR(e.cnpj,9,4) || '-' || SUBSTR(e.cnpj,13,2)
                                     ELSE e.cnpj END CASE
 									FROM funcionarios f JOIN estabelecimentos e ON e.id_estabelecimento = f.id_estabelecimento
+				    order by 1 asc
                                 """)
             print_tabulado(query, ['ID Funcionário', 'Nome', 'CPF', 'ID Estabelecimento', 'CNPJ Estabelecimento'])
         elif escolhaTabela == 3: # Fornecedor
@@ -80,10 +81,11 @@ while True:
                                     THEN '(' || substr(fo.telefone,0,3) || ') ' || substr(fo.telefone,3,5) || '-' || substr(fo.telefone,8,15)
                                     ELSE fo.telefone END CASE,
                                     fo.email FROM fornecedores fo
+				    order by 1 asc
                                 """)
             print_tabulado(query, ['ID Fornecedor', 'Nome', 'CNPJ', 'Telefone', 'E-mail'])
         elif escolhaTabela == 4: # Produto
-            query = query_banco("SELECT p.* FROM produtos p")
+            query = query_banco("SELECT p.* FROM produtos p order by 1 asc")
             print_tabulado(query, ['ID Produto', 'Nome', 'Descrição'])
         elif escolhaTabela == 5: # Pedido
             query = query_banco(""" SELECT 	ped.id_pedido, COUNT(pedprod.id_produto) AS nr_produtos, 
@@ -132,7 +134,6 @@ while True:
                                 THEN SUBSTR(f.cpf,0,4) || '.' || SUBSTR(f.cpf,4,3) || '.' || SUBSTR(f.cpf,7,3) || '-' ||  SUBSTR(f.cpf,10,2)
                                 ELSE f.cpf END from vendas_produtos vp join vendas v on v.id_venda = vp.id_venda join produtos pr on pr.id_produto = vp.id_produto join estabelecimentos e on e.id_estabelecimento = v.id_estabelecimento join funcionarios f on f.id_funcionario = v.id_funcionario 
                                 where vp.id_venda={id_venda}
-								order by 1 asc
                             """)
             print_tabulado(query, ['Quantidade', 'Valor unitário', 'Id Produto', 'Nome Produto', 'ID Estabelecimento','CNPJ Estabelecimento','ID Funcionario','CPF Funcionário'])
         break_line()
