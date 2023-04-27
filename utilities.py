@@ -43,7 +43,7 @@ def menuInicial():
     escolha = int_input("Informe a opção: ")
     return escolha
 
-def menuTabelas(espec=0): # Apenas das tabelas entidade
+def menuTabelas(temTabelasEntidade = False): # Apenas das tabelas entidade
     clear()
     print("Informe a opção desejada:")
     print("1 - Estabelecimentos")
@@ -53,7 +53,7 @@ def menuTabelas(espec=0): # Apenas das tabelas entidade
     print("5 - Pedidos")
     print("6 - Vendas")
 
-    if espec==1:
+    if temTabelasEntidade:
         print("7 - Produtos dos pedidos")
         print("8 - Produtos das vendas")
 
