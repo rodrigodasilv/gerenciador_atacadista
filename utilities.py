@@ -20,11 +20,12 @@ def break_line():
 
 def print_pause(texto):
     print(texto)
+    break_line()
     pause()
 
 def int_input(texto):
     num = input(texto)
-    if num.isnumeric():
+    if num.isnumeric(): # Dessa forma já valida números negativos
         num = int(num)
     else:
         num = None
@@ -106,7 +107,7 @@ def solicitar_inputs(persona, *inputs):
         entrada = None
         if _input == 'chave':
             entrada = int_input(f'Digite o ID do {persona}: ')
-            if entrada and entrada <= 0:
+            if not entrada:
                 print('ID invalido!')
                 entrada = None
         if _input == 'cnpj':
@@ -128,7 +129,7 @@ def solicitar_inputs(persona, *inputs):
                 entrada = None
         if _input == 'nome':
             entrada = input(f'Informe o Nome completo do {persona}: ')
-            if entrada.isnumeric():
+            if not valida_nome(entrada):
                 print('Nome invalido!')
                 entrada = None
         if _input == 'telefone':
@@ -166,3 +167,12 @@ def valida_email(email):
                 return True
     
     return False
+
+def valida_nome(nome):
+    # Inputs invalidos: '-1' , '+1' , ' -1' , ' +1'
+    nome = nome.replace(' ', '') # Remove espacos
+    nome = nome.replace('-', '') # Remove negativos
+    nome = nome.replace('+', '') # Remove positivos
+    if nome.isnumeric():
+        return False
+    return True
