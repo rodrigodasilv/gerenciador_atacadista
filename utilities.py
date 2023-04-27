@@ -18,6 +18,10 @@ def clear():
 def break_line():
     print('\n')
 
+def print_pause(texto):
+    print(texto)
+    pause()
+
 def int_input(texto):
     num = input(texto)
     if num.isnumeric():
@@ -102,13 +106,19 @@ def solicitar_inputs(persona, *inputs):
         entrada = None
         if _input == 'chave':
             entrada = int_input(f'Digite o ID do {persona}: ')
-            if entrada <= 0:
-                entrada = None
+            if entrada and entrada <= 0:
                 print('ID invalido!')
+                entrada = None
         if _input == 'cnpj':
             entrada = input(f'Informe o CNPJ do {persona}: ')
+            if not valida_cnpj(entrada):
+                print('CNPJ invalido!')
+                entrada = None
         if _input == 'cpf':
             entrada = input(f'Informe o CPF do {persona}: ')
+            if not valida_cpf(entrada):
+                print('CPF invalido!')
+                entrada = None
         if _input == 'descricao':
             entrada = input(f"Informe a descricao do {persona}: ")
         if _input == 'email':
@@ -118,16 +128,36 @@ def solicitar_inputs(persona, *inputs):
                 entrada = None
         if _input == 'nome':
             entrada = input(f'Informe o Nome completo do {persona}: ')
+            if entrada.isnumeric():
+                print('Nome invalido!')
+                entrada = None
         if _input == 'telefone':
             entrada = input(f'Informe o telefone do {persona} (com DDD): ')
         
-        if entrada:
-            lista_inputs.append(entrada)
+        lista_inputs.append(entrada)
 
     if len(lista_inputs) == 1:
         return lista_inputs[0]
 
     return lista_inputs
+
+def valida_cnpj(cnpj):
+    cnpj = str(cnpj)
+    cnpj = ''.join(filter(str.isdigit, cnpj)) # Remove caracteres não numéricos, como traços e pontos
+
+    # Verifica se o CNPJ possui 14 dígitos
+    if len(cnpj) != 14:
+        return False
+    return True
+
+def valida_cpf(cpf):
+    cpf = str(cpf)
+    cpf = ''.join(filter(str.isdigit, cpf)) # Remove caracteres não numéricos
+
+    # Verifica se o CPF possui 11 dígitos
+    if len(cpf) != 11:
+        return False
+    return True
 
 def valida_email(email):
     if email.count("@") == 1 and "." in email.split("@")[1]:
