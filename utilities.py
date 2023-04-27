@@ -19,7 +19,11 @@ def break_line():
     print('\n')
 
 def int_input(texto):
-    num = int(input(texto))
+    num = input(texto)
+    if num.isnumeric():
+        num = int(num)
+    else:
+        num = None
     return num
 
 def menuInicial():
