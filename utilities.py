@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 dbname='db_atacadista'
 user='postgres'
-password='123'
+password='admin'
 
 def pause():
     os.system("pause")
@@ -101,6 +101,22 @@ def query_banco(query):
 
 def print_tabulado(query, header):
     print(tabulate(query, headers=header))
+    
+def valida_inputs(lista_inputs):
+    for inp in lista_inputs:
+        if inp == None:
+            return False
+    return True
+
+def exec_query(query, values = None):
+    if not values:
+        return False
+    if not valida_inputs(values):
+        print_pause('Inputs invalidos.')
+        return False
+    with cursor_banco() as cursor:
+        cursor.execute(query, values)
+    return True
     
 def solicitar_inputs(persona, *inputs):
     lista_inputs = []
