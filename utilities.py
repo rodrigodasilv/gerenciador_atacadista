@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 dbname='db_atacadista'
 user='postgres'
-password='admin'
+password='123'
 
 def pause():
     os.system("pause")
@@ -19,6 +19,7 @@ def break_line():
     print('\n')
 
 def print_pause(texto):
+    break_line()
     print(texto)
     break_line()
     pause()
