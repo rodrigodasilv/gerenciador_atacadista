@@ -6,7 +6,9 @@ import os
 
 while True:
     escolhaInicial = menuInicial()
+
     if escolhaInicial == 0: break
+    if not escolhaInicial: continue
 
     escolhaTabela = None
 
@@ -17,24 +19,20 @@ while True:
 
         if escolhaTabela == 1: # Estabelecimento
             cnpj, telefone = solicitar_inputs('estabelecimento', 'cnpj', 'telefone')
-            query_banco("INSERT INTO estabelecimentos (telefone, cnpj) VALUES (%s,%s);",(cnpj, telefone))
+            exec_query('INSERT INTO estabelecimentos (cnpj, telefone) VALUES (%s,%s);', (cnpj, telefone))
         elif escolhaTabela == 2: # Funcionário
             nome, cpf = solicitar_inputs('funcionario', 'nome', 'cpf')
             id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
-            with cursor_banco() as cursor:
-                cursor.execute("INSERT INTO funcionarios (nome, cpf, id_estabelecimento) VALUES (%s,%s,%s);", (nome, cpf, id_estabelecimento));
+            exec_query("INSERT INTO funcionarios (nome, cpf, id_estabelecimento) VALUES (%s,%s,%s);", (nome, cpf, id_estabelecimento));
         elif escolhaTabela == 3: # Fornecedor
             nome, cnpj, telefone, email = solicitar_inputs('fornecedor', 'nome', 'cnpj', 'telefone', 'email')
-            with connect_banco() as cursor:
-                cursor.execute('INSERT INTO fornecedores (nome, cnpj, telefone, email) VALUES (%s,%s,%s,%s);', (nome, cnpj, telefone, email))
+            exec_query('INSERT INTO fornecedores (nome, cnpj, telefone, email) VALUES (%s,%s,%s,%s);', (nome, cnpj, telefone, email))
         elif escolhaTabela == 4: # Produto
             nome, descricao = solicitar_inputs('produto', 'nome', 'descricao')
-            with connect_banco() as cursor:
-                cursor.execute('INSERT INTO produtos (nome, descricao)  VALUES (%s,%s)', (nome, descricao))
-    
+            exec_query('INSERT INTO produtos (nome, descricao)  VALUES (%s,%s)', (nome, descricao))
     # 2 - Consulta (SELECTS)
     while escolhaInicial == 2 and escolhaTabela != 0:
-        escolhaTabela = menuTabelas(1)
+        escolhaTabela = menuTabelas(temTabelasEntidade = True)
         if escolhaTabela == 0: continue
 
         break_line()
@@ -59,7 +57,7 @@ while True:
                                     THEN substr(e.cnpj,1,2) || '.' || SUBSTR(e.cnpj,3,3) || '.' || SUBSTR(e.cnpj,6,3) || '/' || SUBSTR(e.cnpj,9,4) || '-' || SUBSTR(e.cnpj,13,2)
                                     ELSE e.cnpj END CASE
 									FROM funcionarios f JOIN estabelecimentos e ON e.id_estabelecimento = f.id_estabelecimento
-				    order by 1 asc
+				                    order by 1 asc
                                 """)
             print_tabulado(query, ['ID Funcionário', 'Nome', 'CPF', 'ID Estabelecimento', 'CNPJ Estabelecimento'])
         elif escolhaTabela == 3: # Fornecedor
@@ -71,7 +69,7 @@ while True:
                                     THEN '(' || substr(fo.telefone,0,3) || ') ' || substr(fo.telefone,3,5) || '-' || substr(fo.telefone,8,15)
                                     ELSE fo.telefone END CASE,
                                     fo.email FROM fornecedores fo
-				    order by 1 asc
+				                    order by 1 asc
                                 """)
             print_tabulado(query, ['ID Fornecedor', 'Nome', 'CNPJ', 'Telefone', 'E-mail'])
         elif escolhaTabela == 4: # Produto
@@ -136,13 +134,11 @@ while True:
 
         if escolhaTabela == 1: # Estabelecimento
             chave, cnpj, telefone = solicitar_inputs('estabelecimento', 'chave', 'cnpj', 'telefone')
-            with cursor_banco() as cursor:
-                cursor.execute("UPDATE estabelecimentos SET telefone = %s, cnpj = %s WHERE id_estabelecimento = %s", (telefone, cnpj, chave))
+            exec_query("UPDATE estabelecimentos SET telefone = %s, cnpj = %s WHERE id_estabelecimento = %s", (telefone, cnpj, chave))
         elif escolhaTabela == 2: # Funcionário
             chave, nome, cpf = solicitar_inputs('funcionario', 'chave', 'nome', 'cpf')
             id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
-            with cursor_banco() as cursor:
-                cursor.execute('UPDATE funcionarios SET nome = %s, cpf = %s, id_estabelecimento = %s WHERE id_funcionario = %s', (nome, cpf, id_estabelecimento, chave))
+            exec_query('UPDATE funcionarios SET nome = %s, cpf = %s, id_estabelecimento = %s WHERE id_funcionario = %s', (nome, cpf, id_estabelecimento, chave))
         elif escolhaTabela == 3: # Fornecedor
             chave, nome, cnpj, telefone, email = solicitar_inputs('fornecedor', 'chave', 'nome', 'cnpj', 'telefone', 'email')
             with cursor_banco() as cursor:
