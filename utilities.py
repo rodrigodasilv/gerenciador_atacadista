@@ -151,9 +151,6 @@ def solicitar_inputs(persona, *inputs):
                 entrada = None
         if _input == 'telefone':
             entrada = input(f'Informe o telefone do {persona} (com DDD): ')
-            if not valida_tel(entrada):
-                print('Telefone invalido!')
-                entrada = None
         
         lista_inputs.append(entrada)
 
@@ -161,15 +158,6 @@ def solicitar_inputs(persona, *inputs):
         return lista_inputs[0]
 
     return lista_inputs
-
-def valida_tel(tel):
-    tel = str(tel)
-    tel = ''.join(filter(str.isdigit, tel)) # Remove caracteres não numéricos, como traços e pontos
-
-    # Verifica se o CNPJ possui 14 dígitos
-    if len(tel) != 11:
-        return False
-    return True
 
 def valida_cnpj(cnpj):
     cnpj = str(cnpj)
