@@ -175,19 +175,23 @@ while True:
         if escolhaTabela == 1: # Estabelecimento
             print("ATENÇÃO! Todos os funcionários, pedidos, vendas e produtos vinculados a este estabelecimento serão excluídos!")
             chave = solicitar_inputs('estabelecimento', 'chave')
-            exec_query(f"DELETE FROM estabelecimentos WHERE id_estabelecimento=%s", (chave))
+            with cursor_banco() as cursor:
+                cursor.execute(f"DELETE FROM estabelecimentos WHERE id_estabelecimento={chave}")
         elif escolhaTabela == 2: # Funcionário
             print("ATENÇÃO! Todos os pedidos e vendas vinculados a este funcionário serão excluídos!")
             chave = solicitar_inputs('funcionario', 'chave')
-            exec_query(f"DELETE FROM funcionarios WHERE id_funcionario=%s", (chave))
+            with cursor_banco() as cursor:
+                cursor.execute(f"DELETE FROM funcionarios WHERE id_funcionario={chave}")
         elif escolhaTabela == 3: # Fornecedor
             print("ATENÇÃO! Todos os pedidos vinculados a este fornecedor serão excluídos!")
             chave = solicitar_inputs('fornecedor', 'chave')
-            exec_query(f"DELETE FROM fornecedores WHERE id_fornecedor=%s", (chave))
+            with cursor_banco() as cursor:
+                cursor.execute(f"DELETE FROM fornecedores WHERE id_fornecedor={chave}")
         elif escolhaTabela == 4: # Produto
             print("ATENÇÃO! Todos os produtos de pedidos, compras ou estabelecimentos vinculados a este serão excluídos!")
             chave = solicitar_inputs('produto', 'chave')
-            exec_query(f"DELETE FROM produtos WHERE id_produto=%s", (chave))
+            with cursor_banco() as cursor:
+                cursor.execute(f"DELETE FROM produtos WHERE id_produto={chave}")
         elif escolhaTabela == 5: # Pedidos
             print("ATENÇÃO! Todos os registros de produtos pedidos vinculados à este pedido serão excluídos!")
             chave = solicitar_inputs('pedido', 'chave')
@@ -212,7 +216,7 @@ while True:
         data = datetime.now().strftime('%d/%m/%Y %H:%M')
         id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
         id_funcionario = solicitar_inputs('funcionario', 'chave')
-        
+
         with cursor_banco() as cursor:
             cursor.execute("INSERT INTO vendas (data_venda, id_estabelecimento, id_funcionario) VALUES (%s, %s, %s) RETURNING id_venda", (data, id_estabelecimento, id_funcionario))
             id_venda = cursor.fetchone()[0]
@@ -314,6 +318,7 @@ while True:
 
             registros.append((id_produto, valor_un, quantidadePedida))
 
+        print(registros)
         with cursor_banco() as cursor:
             for registro in registros:
                 id_produto = registro[0]
@@ -334,9 +339,6 @@ while True:
 
         if escolhaRelatorio == 1: # Produtos disponíveis em cada estabelecimento
             id_estabelecimento = int_input('Informe o ID do estabelecimento (0 para todos estabelecimentos): ')
-            if not id_estabelecimento:
-                continue
-
             query = query_banco(f""" SELECT estab.id_estabelecimento, estab.cnpj, prod.id_produto, prod.nome,sum(prod.id_produto)
                                     FROM produtos prod
                                     INNER JOIN estabelecimentos_produtos estab_prod
@@ -350,9 +352,6 @@ while True:
             print_tabulado(query, ['ID Estabelecimento', 'CNPJ','ID Produto','Nome Produto','Quantidade de produtos'])
         elif escolhaRelatorio == 2: # Vendas por funcionário
             id_funcionario = int_input('Informe o ID do funcionário (0 para todos funcionários): ')
-            if not id_funcionario:
-                continue
-
             query = query_banco(f""" SELECT f.id_funcionario, f.nome, count(v.id_venda) AS qtd_vendas, SUM(v_prod.valor_unitario * v_prod.quantidade) AS valor_arrecadado, to_char(v.data_venda,'MM/YYYY')
                                     FROM funcionarios f
                                     INNER JOIN vendas v
@@ -366,8 +365,6 @@ while True:
             print_tabulado(query, ['ID Funcionario', 'Nome', 'Quantidade de vendas', 'Valor arrecadado','Mês/Ano'])
         elif escolhaRelatorio == 3: # Compras por fornecedor
             id_fornecedor = int_input('Informe o ID do fornecedor (0 para todos fornecedores): ')
-            if not id_fornecedor:
-                continue
             query = query_banco(f""" SELECT f.nome, count(ped.id_pedido) AS qtd_pedidos, sum(ped_prod.valor_unitario * ped_prod.quantidade) AS valor_pago, to_char(ped.data_pedido,'MM/YYYY')
                                     FROM fornecedores f
                                     INNER JOIN pedidos ped
