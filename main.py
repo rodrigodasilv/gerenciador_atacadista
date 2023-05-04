@@ -20,7 +20,7 @@ while True:
         if escolhaTabela == 1: # Estabelecimento
             cnpj, telefone = solicitar_inputs('estabelecimento', 'cnpj', 'telefone')
             exec_query('INSERT INTO estabelecimentos (cnpj, telefone) VALUES (%s,%s);', (cnpj, telefone))
-        elif escolhaTabela == 2: # Funcionario
+        elif escolhaTabela == 2: # Funcionário
             nome, cpf = solicitar_inputs('funcionario', 'nome', 'cpf')
             id_estabelecimento = solicitar_inputs('estabelecimento', 'chave')
             exec_query("INSERT INTO funcionarios (nome, cpf, id_estabelecimento) VALUES (%s,%s,%s);", (nome, cpf, id_estabelecimento));
@@ -97,8 +97,6 @@ while True:
             print_tabulado(query, ['ID Venda', 'Produtos vendidos', 'Data da venda', 'ID Estabelecimento', 'ID Funcionario'])
         elif escolhaTabela == 7: #Pedidos produtos
             id_pedido = solicitar_inputs('pedido', 'chave')
-            if not id_pedido:
-                continue
             query = query_banco(f""" select pp.quantidade, pp.valor_unitario, pr.id_produto, pr.nome, e.id_estabelecimento, 
                                 CASE LENGTH(e.cnpj) WHEN 14
                                 THEN substr(e.cnpj,1,2) || '.' || SUBSTR(e.cnpj,3,3) || '.' || SUBSTR(e.cnpj,6,3) || '/' || SUBSTR(e.cnpj,9,4) || '-' || SUBSTR(e.cnpj,13,2)
@@ -115,8 +113,6 @@ while True:
             print_tabulado(query, ['Quantidade', 'Valor unitário', 'Id Produto', 'Nome Produto', 'ID Estabelecimento','CNPJ Estabelecimento','ID Funcionario','CPF Funcionário','ID Fornecedor','CNPJ Fornecedor'])
         elif escolhaTabela == 8: #Vendas produtos
             id_venda = solicitar_inputs('venda', 'chave')
-            if not id_venda:
-                continue
             query = query_banco(f""" select vp.quantidade, vp.valor_unitario, pr.id_produto, pr.nome, e.id_estabelecimento, 
                                 CASE LENGTH(e.cnpj) WHEN 14
                                 THEN substr(e.cnpj,1,2) || '.' || SUBSTR(e.cnpj,3,3) || '.' || SUBSTR(e.cnpj,6,3) || '/' || SUBSTR(e.cnpj,9,4) || '-' || SUBSTR(e.cnpj,13,2)
