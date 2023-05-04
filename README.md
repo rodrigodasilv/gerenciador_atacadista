@@ -36,7 +36,7 @@ O domínio escolhido para o trabalho de BAN2 foi um mercado atacadista, possuind
 
 #### Python
 
-Instalar o Python, com a opção `Add python.exe to PATH` selecionada:
+Instalar o [Python](https://www.python.org/), com a opção `Add python.exe to PATH` selecionada:
 
 ![image](https://user-images.githubusercontent.com/84868817/232258651-c949e3c9-5566-411b-b144-e06e2fd7dd65.png)
 
